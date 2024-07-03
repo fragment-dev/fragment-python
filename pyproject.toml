@@ -1,0 +1,24 @@
+[tool.ariadne-codegen]
+schema_path = "schema.graphql"
+queries_path = "queries/queries.graphql"
+target_package_name = "fragment_graphql_client"
+
+[tool.poetry]
+name = "fragment-python"
+version = "0.1.0"
+description = "Python SDK for https://fragment.dev/"
+authors = ["Your Name <you@example.com>"]
+license = "Apache 2.0"
+readme = "README.md"
+packages = [{include = "fragment"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ariadne-codegen = "^0.13.0"
+requests-oauth2client = "^1.5.3"
+pydantic = "^2.8.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
