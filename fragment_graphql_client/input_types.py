@@ -154,6 +154,7 @@ class LedgerAccountConditionInput(BaseModel):
 
 
 class LedgerAccountConsistencyConfigInput(BaseModel):
+    groups: Optional[List["LedgerAccountGroupConsistencyConfigInput"]] = None
     lines: Optional[LedgerLinesConsistencyMode] = None
     own_balance_updates: Optional[BalanceUpdateConsistencyMode] = Field(
         alias="ownBalanceUpdates", default=None
@@ -163,6 +164,11 @@ class LedgerAccountConsistencyConfigInput(BaseModel):
 class LedgerAccountFilter(BaseModel):
     equal_to: Optional["LedgerAccountMatchInput"] = Field(alias="equalTo", default=None)
     in_: Optional[List["LedgerAccountMatchInput"]] = Field(alias="in", default=None)
+
+
+class LedgerAccountGroupConsistencyConfigInput(BaseModel):
+    key: str
+    own_balance_updates: BalanceUpdateConsistencyMode = Field(alias="ownBalanceUpdates")
 
 
 class LedgerAccountMatchInput(BaseModel):
