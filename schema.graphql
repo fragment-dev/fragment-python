@@ -270,7 +270,7 @@ type CurrencyAmount {
 """A paginated list of amounts with their currencies"""
 type CurrencyAmountConnection {
   """The current page of results"""
-  nodes: [CurrencyAmount!]
+  nodes: [CurrencyAmount!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
@@ -628,7 +628,7 @@ type ExternalAccount {
     The number of Ledger Accounts to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgerAccountsConnection
+  ): LedgerAccountsConnection!
 
   """The Link that this External Account belongs to."""
   link: Link!
@@ -877,7 +877,7 @@ type Ledger {
     The number of Ledger Accounts to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgerAccountsConnection
+  ): LedgerAccountsConnection!
 
   """
   Query Ledger Entries in a Ledger. Ledger Entries are paginated and sorted in reverse-chronological order by posted date.
@@ -907,7 +907,7 @@ type Ledger {
     The number of Ledger Entries to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgerEntriesConnection
+  ): LedgerEntriesConnection!
 
   """Query a Ledger Entry Group for this Ledger given its key and value."""
   ledgerEntryGroup(ledgerEntryGroup: EntryGroupMatchInput!): LedgerEntryGroup!
@@ -938,10 +938,10 @@ type Ledger {
     The number of Ledger Entry Groups to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgerEntryGroupsConnection
+  ): LedgerEntryGroupsConnection!
 
   """Schema migrations affecting this Ledger."""
-  migrations: LedgerMigrationConnection
+  migrations: LedgerMigrationConnection!
 
   """
   The name of the Ledger. Can be updated with the [updateLedger](/api-reference#mutations-updateledger) mutation.
@@ -1248,7 +1248,7 @@ type LedgerAccount {
     The number of unreconciled transactions to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): TxsConnection
+  ): TxsConnection!
   workspaceId: ID! @deprecated(reason: "Callers should not need to query or store this value.")
 }
 
@@ -1298,24 +1298,27 @@ See [Configure consistency](https://fragment.dev/docs#configure-consistency).
 """
 input LedgerAccountConsistencyConfigInput {
   """
-  If set to `strong`, then a Ledger Account's `lines` updates will be strongly consistent with
-  the API response. This Ledger Account's balance will be updated and
-  available for strongly consistent reads before you receive an API response.
+  The consistency configuration for Ledger Entry Groups affecting this account.
   
-  Otherwise if unset or set to `eventual`, `lines` updates are applied
-  asynchronously and may not be immediately reflected queries.
+  See [Configure consistency](https://fragment.dev/docs#configure-consistency).
+  """
+  groups: [LedgerAccountGroupConsistencyConfigInput!]
+
+  """
+  If set to `strong`, then a Ledger Account's `lines` updates will be strongly consistent with the API response.
+  This Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.
+  
+  Otherwise if unset or set to `eventual`, `lines` updates are applied asynchronously and may not be immediately reflected in queries.
   
   See [Configure consistency](https://fragment.dev/docs#configure-consistency).
   """
   lines: LedgerLinesConsistencyMode
 
   """
-  If set to `strong`, then a Ledger Account's `ownBalance` updates will be strongly consistent with
-  the API response. This Ledger Account's balance will be updated and
-  available for strongly consistent reads before you receive an API response.
+  If set to `strong`, then a Ledger Account's `ownBalance` updates will be strongly consistent with the API response.
+  This Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.
   
-  Otherwise if unset or set to `eventual`, `ownBalance` updates are applied
-  asynchronously and may not be immediately reflected queries.
+  Otherwise if unset or set to `eventual`, `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.
   
   See [Configure consistency](https://fragment.dev/docs#configure-consistency).
   """
@@ -1328,6 +1331,24 @@ input LedgerAccountFilter {
 
   """Results can match any of specified Ledger Accounts"""
   in: [LedgerAccountMatchInput!]
+}
+
+"""
+The consistency configuration for a specific Ledger Entry Group in this account.
+"""
+input LedgerAccountGroupConsistencyConfigInput {
+  """The group key for this configuration."""
+  key: String!
+
+  """
+  If set to `strong`, then Ledger Entry Group `ownBalance`s updates for this account will be strongly consistent with the API response.
+  This Ledger Account's Ledger Entry Group balances will be updated and available for strongly consistent reads before you receive an API response.
+  
+  Otherwise if unset or set to `eventual`, Ledger Entry Group `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.
+  
+  See [Configure consistency](https://fragment.dev/docs#configure-consistency).
+  """
+  ownBalanceUpdates: BalanceUpdateConsistencyMode!
 }
 
 """
@@ -1370,7 +1391,7 @@ enum LedgerAccountTypes {
 """A paginated list of Ledger Accounts"""
 type LedgerAccountsConnection {
   """The current page of results"""
-  nodes: [LedgerAccount!]
+  nodes: [LedgerAccount!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
@@ -1408,7 +1429,7 @@ input LedgerAccountsFilterSet {
 """A paginated list of Ledger Entries"""
 type LedgerEntriesConnection {
   """The current page of results"""
-  nodes: [LedgerEntry!]
+  nodes: [LedgerEntry!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
@@ -1595,7 +1616,12 @@ type LedgerEntryGroupBalance {
   currency: Currency!
 
   """The total balance change for this Ledger Account and currency."""
-  ownBalance: Int96!
+  ownBalance(
+    """
+    The consistency mode to use when fetching the balance. Use 'use_account' to match the configured consistency mode of the account.
+    """
+    consistencyMode: ReadBalanceConsistencyMode
+  ): Int96!
 }
 
 """A set of balance changes for a specific Ledger Entry Group."""
@@ -1856,7 +1882,7 @@ input LedgerLineMatchInput {
 """A paginated list of Ledger Lines"""
 type LedgerLinesConnection {
   """The current page of results"""
-  nodes: [LedgerLine!]
+  nodes: [LedgerLine!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
@@ -1953,7 +1979,7 @@ enum LedgerTypes {
 """A paginated list of Ledgers"""
 type LedgersConnection {
   """The current page of results"""
-  nodes: [Ledger!]
+  nodes: [Ledger!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
@@ -2272,7 +2298,7 @@ type Query {
     The number of Ledgers to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgersConnection
+  ): LedgersConnection!
 
   """Get a Link by ID. Returns a BadRequestError if the Link is not found."""
   link(
@@ -2310,7 +2336,7 @@ type Query {
     The number of schemas to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): SchemaConnection
+  ): SchemaConnection!
 
   """Get a Tx by ID"""
   tx(
@@ -2429,7 +2455,7 @@ type Schema {
     The number of Ledgers to return per page, when paginating backwards. Defaults to 20, maximum is 200.
     """
     last: Int
-  ): LedgersConnection
+  ): LedgersConnection!
 
   """
   The name of a Schema. It defaults to the `key` if not provided in your SchemaInput.
@@ -2801,7 +2827,7 @@ It stores the Chart of Accounts and list of Ledger Entries as well as a history 
 type SchemaVersion {
   created: DateTime!
   json: JSON!
-  migrations: LedgerMigrationConnection
+  migrations: LedgerMigrationConnection!
 
   """The version of the schema."""
   version: Int!
@@ -2935,7 +2961,7 @@ type Tx {
   """
   Returns ledger entries that are linked to this transaction. You can link the same external account to multiple ledgers, so there could be multipe entries associated with one transaction - one for each linked ledger account this transaction has been reconciled with
   """
-  ledgerEntries: LedgerEntriesConnection
+  ledgerEntries: LedgerEntriesConnection!
 
   """Same as ledgerEntries, but returns an array of IDs instead"""
   ledgerEntryIds: [ID!]
@@ -2946,7 +2972,7 @@ type Tx {
   """
   Returns ledger lines that are linked to this transaction. You can link the same external account to multiple ledgers, so there could be multipe lines associated with one transaction - one for each linked ledger account this transaction has been reconciled with
   """
-  ledgerLines: LedgerLinesConnection
+  ledgerLines: LedgerLinesConnection!
 
   """This transaction's Link."""
   link: Link!
@@ -2992,7 +3018,7 @@ input TxTypeFilter {
 """A paginated list of Txs"""
 type TxsConnection {
   """The current page of results"""
-  nodes: [Tx!]
+  nodes: [Tx!]!
 
   """
   The [pagination info](https://fragment.dev/api-reference#types-connection-types-pageinfo) for this list
