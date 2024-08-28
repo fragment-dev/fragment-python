@@ -1,12 +1,15 @@
 # fragment-python
 
 ```python
-from .client import get_access_token, get_client
+from .fragment_graphql_client.client import Client
 
-access_token = get_access_token(
-  "<auth url from dashboard>", "<client id from dashboard>", "<client secret from dashboard>")
-
-graphql_client = get_client("<api url from dashboard>", access_token)
+graphql_client = new Client(
+    client_id="<client id from the dashboard>",
+    client_secret="<client secret from the dashboard>",
+    api_url="<api url from the dashboard>",
+    auth_url="<auth url from the dashboard>",
+    auth_scope="<auth scope from the dashboard>",
+  )
 
 get_schema_result = await graphql_client.get_schema('<Your Schema Key here>')
 
@@ -14,8 +17,22 @@ get_schema_result = await graphql_client.get_schema('<Your Schema Key here>')
 print(get_schema_result.schema_.json())
 ```
 
-## To generate a GraphQL client
+## Prerequisites
+
+Install the SDK dependencies:
+```shell
+poetry install
+```
+
+Install the [Fragment CLI](https://github.com/fragment-dev/workspaces/pull/2143):
+
+```shell
+brew tap fragment-dev/tap &&\
+  brew install fragment-dev/tap/fragment-cli
+```
+
+## Generate a GraphQL client
 
 1. Download your Schema by running `fragment get-schema --key=<schema-key>`. This will write a .jsonc file to your CWD.
 2. Generate the schema-based GraphQL queries by running `fragment gen-graphql --path=<path-to-schema.jsonc> --output=queries/schema_queries.graphql`. The `queries` folder exists within this repository already.
-3. Run `ariadne-codegen` from the root of this project.
+3. Run `poetry run gen-graphql` from the root of this project.
