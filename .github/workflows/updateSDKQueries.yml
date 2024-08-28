@@ -43,7 +43,7 @@ jobs:
       - name: Generate SDK
         working-directory: ./fragment-python
         run: |
-          poetry run gen-graphql
+          make build
           make lint
 
       - name: Create Pull Request
