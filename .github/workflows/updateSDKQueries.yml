@@ -38,7 +38,7 @@ jobs:
         working-directory: ./fragment-python
         run: |
           mkdir queries
-          cp ../graphql-queries/queries.graphql queries/queries.graphql
+          cp ../graphql-queries/queries.graphql fragment/std_queries/queries.graphql
 
       - name: Generate SDK
         working-directory: ./fragment-python

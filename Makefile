@@ -12,7 +12,7 @@ style:
 	poetry run black fragment/
 
 typecheck:
-	mypy -p fragment
+	poetry run mypy -p fragment
 
 build: install
 	poetry run fragment-python-client-codegen --queries-path=queries/ --target-package=fragment_graphql_client
