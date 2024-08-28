@@ -14,6 +14,7 @@ from .get_ledger_account_balance import GetLedgerAccountBalance
 from .get_ledger_account_lines import GetLedgerAccountLines
 from .get_ledger_entry import GetLedgerEntry
 from .get_schema import GetSchema
+from .get_workspace import GetWorkspace
 from .input_types import (
     CreateLedgerInput,
     CurrencyMatchInput,
@@ -39,6 +40,7 @@ from .list_multi_currency_ledger_account_balances import (
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
 from .store_schema import StoreSchema
+from .store_schema_again import StoreSchemaAgain
 from .sync_custom_accounts import SyncCustomAccounts
 from .sync_custom_txs import SyncCustomTxs
 from .update_ledger import UpdateLedger
@@ -69,6 +71,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -80,6 +83,43 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return StoreSchema.model_validate(data)
+
+    async def store_schema_again(
+        self, schema: SchemaInput, **kwargs: Any
+    ) -> StoreSchemaAgain:
+        query = gql(
+            """
+            mutation storeSchemaAgain($schema: SchemaInput!) {
+              storeSchema(schema: $schema) {
+                __typename
+                ... on StoreSchemaResult {
+                  schema {
+                    key
+                    name
+                    version {
+                      created
+                      version
+                    }
+                  }
+                }
+                ... on Error {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"schema": schema}
+        response = await self.execute(
+            query=query,
+            operation_name="storeSchemaAgain",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return StoreSchemaAgain.model_validate(data)
 
     async def create_ledger(
         self, ik: Any, ledger: CreateLedgerInput, schema_key: Any, **kwargs: Any
@@ -104,6 +144,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -159,6 +200,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -218,6 +260,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -278,6 +321,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -333,6 +377,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -435,6 +480,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -466,6 +512,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -503,6 +550,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -541,6 +589,7 @@ class Client(AsyncFragmentClient):
                 ... on Error {
                   code
                   message
+                  retryable
                 }
               }
             }
@@ -892,76 +941,6 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return GetLedgerAccountBalance.model_validate(data)
 
-    async def list_ledger_entry_group_balances(
-        self,
-        ledger_ik: Any,
-        group_key: Any,
-        group_value: Any,
-        consistency_mode: Optional[ReadBalanceConsistencyMode] = None,
-        after: Optional[str] = None,
-        before: Optional[str] = None,
-        first: Optional[int] = None,
-        last: Optional[int] = None,
-        filter: Optional[LedgerEntryGroupBalanceFilterSet] = None,
-        **kwargs: Any
-    ) -> ListLedgerEntryGroupBalances:
-        query = gql(
-            """
-            query listLedgerEntryGroupBalances($ledgerIk: SafeString!, $groupKey: SafeString!, $groupValue: SafeString!, $consistencyMode: ReadBalanceConsistencyMode = use_account, $after: String, $before: String, $first: Int, $last: Int, $filter: LedgerEntryGroupBalanceFilterSet) {
-              ledgerEntryGroup(
-                ledgerEntryGroup: {ledger: {ik: $ledgerIk}, key: $groupKey, value: $groupValue}
-              ) {
-                key
-                value
-                created
-                balances(
-                  after: $after
-                  before: $before
-                  first: $first
-                  last: $last
-                  filter: $filter
-                ) {
-                  nodes {
-                    account {
-                      path
-                    }
-                    currency {
-                      code
-                      customCurrencyId
-                    }
-                    ownBalance(consistencyMode: $consistencyMode)
-                  }
-                  pageInfo {
-                    hasNextPage
-                    endCursor
-                    hasPreviousPage
-                    startCursor
-                  }
-                }
-              }
-            }
-            """
-        )
-        variables: Dict[str, object] = {
-            "ledgerIk": ledger_ik,
-            "groupKey": group_key,
-            "groupValue": group_value,
-            "consistencyMode": consistency_mode,
-            "after": after,
-            "before": before,
-            "first": first,
-            "last": last,
-            "filter": filter,
-        }
-        response = await self.execute(
-            query=query,
-            operation_name="listLedgerEntryGroupBalances",
-            variables=variables,
-            **kwargs
-        )
-        data = self.get_data(response)
-        return ListLedgerEntryGroupBalances.model_validate(data)
-
     async def get_schema(
         self, key: Any, version: Optional[int] = None, **kwargs: Any
     ) -> GetSchema:
@@ -1040,3 +1019,91 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return ListLedgerEntries.model_validate(data)
+
+    async def get_workspace(self, **kwargs: Any) -> GetWorkspace:
+        query = gql(
+            """
+            query getWorkspace {
+              workspace {
+                id
+                name
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {}
+        response = await self.execute(
+            query=query, operation_name="getWorkspace", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return GetWorkspace.model_validate(data)
+
+    async def list_ledger_entry_group_balances(
+        self,
+        ledger_ik: Any,
+        group_key: Any,
+        group_value: Any,
+        consistency_mode: Optional[ReadBalanceConsistencyMode] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        filter: Optional[LedgerEntryGroupBalanceFilterSet] = None,
+        **kwargs: Any
+    ) -> ListLedgerEntryGroupBalances:
+        query = gql(
+            """
+            query listLedgerEntryGroupBalances($ledgerIk: SafeString!, $groupKey: SafeString!, $groupValue: SafeString!, $consistencyMode: ReadBalanceConsistencyMode = use_account, $after: String, $before: String, $first: Int, $last: Int, $filter: LedgerEntryGroupBalanceFilterSet) {
+              ledgerEntryGroup(
+                ledgerEntryGroup: {ledger: {ik: $ledgerIk}, key: $groupKey, value: $groupValue}
+              ) {
+                key
+                value
+                created
+                balances(
+                  after: $after
+                  before: $before
+                  first: $first
+                  last: $last
+                  filter: $filter
+                ) {
+                  nodes {
+                    account {
+                      path
+                    }
+                    currency {
+                      code
+                      customCurrencyId
+                    }
+                    ownBalance(consistencyMode: $consistencyMode)
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                    hasPreviousPage
+                    startCursor
+                  }
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "groupKey": group_key,
+            "groupValue": group_value,
+            "consistencyMode": consistency_mode,
+            "after": after,
+            "before": before,
+            "first": first,
+            "last": last,
+            "filter": filter,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="listLedgerEntryGroupBalances",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return ListLedgerEntryGroupBalances.model_validate(data)
