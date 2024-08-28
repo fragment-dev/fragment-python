@@ -6,11 +6,8 @@ import click
 import httpx
 from ariadne_codegen.main import client as generate_graphql_client
 
+from fragment.codegen.helpers import get_codegen_config, get_standard_queries
 from fragment.logger import console_log
-from fragment.codegen.helpers import (
-    get_codegen_config,
-    get_standard_queries,
-)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 

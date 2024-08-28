@@ -16,7 +16,7 @@ def get_project_path_relative_to_file(path: str) -> str:
 def get_codegen_config(
     *, schema_path: str, queries_path: str, target_package_name: str
 ) -> Dict:
-    """ Get the configuration for the codegen tool. """
+    """Get the configuration for the codegen tool."""
     return dict(
         tool={
             "ariadne-codegen": dict(
@@ -28,7 +28,8 @@ def get_codegen_config(
                     "../../client/async_client.py"
                 ),
                 plugins=[
-                    "fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments"
+                    "fragment.codegen.plugins.get_file_comment.GenerateFileComment",
+                    "fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments",
                 ],
             ),
         },
@@ -36,7 +37,7 @@ def get_codegen_config(
 
 
 def get_standard_queries() -> str:
-    """ Get the standard SDK queries for the codegen tool. """
+    """Get the standard SDK queries for the codegen tool."""
     standard_query_file_path = get_project_path_relative_to_file(
         "../../std_queries/queries.graphql"
     )
