@@ -96,7 +96,7 @@ fragment-python-client-codegen \
   --target-package=custom_queries_package \
   --target-package-directory=your_product_libs
 ```
-3. Use the client from the generated package in your product!
+3. Use the client from the generated package in your product! Apart from the custom query methods, this client is functionally identical to `fragment.sdk.client.Client`
 
 ```python
 from .your_product_libs.custom_queries_package.client import Client
