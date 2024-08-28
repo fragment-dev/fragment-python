@@ -1,3 +1,5 @@
+# Ignore untyped authlib
+# mypy: disable-error-code="import-untyped"
 import time
 from typing import Any, Dict, Optional
 

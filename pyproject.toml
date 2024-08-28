@@ -26,6 +26,7 @@ click = "^8.1.7"
 pylint = "^3.2.6"
 black = "^24.8.0"
 isort = "^5.13.2"
+mypy = "^1.11.2"
 
 [build-system]
 requires = ["poetry-core"]

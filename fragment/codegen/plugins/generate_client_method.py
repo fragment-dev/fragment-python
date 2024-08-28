@@ -11,7 +11,7 @@ from ariadne_codegen.plugins.base import Plugin
 from graphql import OperationDefinitionNode
 
 
-def is_ignorable_ast_node(node: ast.expr) -> bool:
+def is_ignorable_ast_node(node: Union[ast.expr, None]) -> bool:
     return node is None or isinstance(node, ast.Name)
 
 
