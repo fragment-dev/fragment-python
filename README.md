@@ -3,7 +3,7 @@
 ```python
 from .fragment_graphql_client.client import Client
 
-graphql_client = new Client(
+graphql_client = Client(
     client_id="<client id from the dashboard>",
     client_secret="<client secret from the dashboard>",
     api_url="<api url from the dashboard>",
