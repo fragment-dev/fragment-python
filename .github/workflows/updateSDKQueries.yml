@@ -23,10 +23,10 @@ jobs:
         with:
           path: fragment-python
 
-      - name: Use Python 3.10.13
+      - name: Use Python 3.10.14
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10.13'
+          python-version: '3.10.14'
 
       - name: Install dependencies
         working-directory: ./fragment-python

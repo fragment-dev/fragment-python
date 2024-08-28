@@ -27,7 +27,9 @@ def get_codegen_config(
                 schema_path=schema_path,
                 queries_path=queries_path,
                 target_package_name=target_package_name,
-                target_package_path=target_package_path if target_package_path else Path.cwd(),
+                target_package_path=(
+                    target_package_path if target_package_path else Path.cwd()
+                ),
                 base_client_name="AsyncFragmentClient",
                 base_client_file_path=get_project_path_relative_to_file(
                     "../../client/async_client.py"
