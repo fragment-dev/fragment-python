@@ -30,7 +30,9 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./fragment-python
-        run: poetry install --with dev
+        run: |
+          pip install poetry
+          poetry install --with dev
 
       - name: Copy queries.graphql
         working-directory: ./fragment-python
