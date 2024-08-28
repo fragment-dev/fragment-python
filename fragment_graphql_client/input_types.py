@@ -281,6 +281,7 @@ class LedgerLineMatchInput(BaseModel):
 
 
 class LedgerLinesFilterSet(BaseModel):
+    created: Optional["DateTimeFilter"] = None
     date: Optional["DateFilter"] = None
     key: Optional["StringFilter"] = None
     posted: Optional["DateTimeFilter"] = None

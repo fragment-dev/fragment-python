@@ -27,9 +27,6 @@ class CreateCustomLinkCreateCustomLinkCreateCustomLinkResult(BaseModel):
 
 
 class CreateCustomLinkCreateCustomLinkCreateCustomLinkResultLink(BaseModel):
-    typename__: Literal[
-        "CustomLink", "IncreaseLink", "Link", "StripeLink", "UnitLink"
-    ] = Field(alias="__typename")
     id: str
     name: str
     created: str
