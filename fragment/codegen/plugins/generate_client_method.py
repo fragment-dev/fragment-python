@@ -45,7 +45,9 @@ class RewriteUnsetTypeMethodArguments(Plugin):
                 else:
                     continue
             elif not is_ignorable_ast_node(arg.annotation):
-                raise TypeError(f"Expected annotation to be of type Subscript. Got {arg.annotation}")
+                raise TypeError(
+                    f"Expected annotation to be of type Subscript. Got {arg.annotation}"
+                )
         if method_def.args.defaults is not None:
             method_def.args.defaults = list(
                 map(

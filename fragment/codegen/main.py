@@ -1,45 +1,59 @@
-import errno
 import logging
-import os
-from pathlib import Path
+import sys
+import tempfile
 
+import click
 import httpx
 from ariadne_codegen.main import client as generate_graphql_client
 
 from fragment.logger import console_log
+from fragment.codegen.helpers import (
+    get_codegen_config,
+    get_standard_queries,
+)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-config_dict = dict(
-    tool={
-        "ariadne-codegen": dict(
-            schema_path="schema.graphql",
-            queries_path="queries/",
-            target_package_name="fragment_graphql_client",
-            base_client_name="AsyncFragmentClient",
-            base_client_file_path="fragment/client/async_client.py",
-            plugins=["fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments"],
-        ),
-    },
+
+GRAPHQL_SCHEMA_API_URL = "https://api.us-west-2.fragment.dev/schema.graphql"
+
+
+@click.command()
+@click.option(
+    "-q",
+    "--queries-path",
+    default=None,
+    help="Path to your Schema queries",
+    required=True,
 )
-
-
-def remove_if_file_exists(filename: str):
+@click.option(
+    "-t",
+    "--target-package",
+    default="fragment_graphql_client",
+    help="The package name for the generated SDK",
+    required=False,
+)
+def run(queries_path, target_package):
+    console_log.info(f"Downloading the GraphQL schema from {GRAPHQL_SCHEMA_API_URL}")
     try:
-        os.remove(filename)
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            raise
-
-
-def run():
-    console_log.info(
-        "Downloading the GraphQL schema from https://api.us-west-2.fragment.dev/schema.graphql"
-    )
-    r = httpx.get("https://api.fragment.dev/schema.graphql")
-    with open("schema.graphql", "w") as f:
-        f.write(r.text)
-    try:
-        generate_graphql_client(config_dict)
-    finally:
-        remove_if_file_exists("schema.graphql")
+        r = httpx.get(GRAPHQL_SCHEMA_API_URL)
+        with tempfile.NamedTemporaryFile(
+            mode="w"
+        ) as schema_file, tempfile.NamedTemporaryFile(
+            dir=queries_path, mode="w", suffix=".graphql"
+        ) as standard_query_file:
+            # Write and flush the most recent schema
+            schema_file.write(r.text)
+            schema_file.flush()
+            # Write and flush the standard queries to the provided queries_path
+            standard_query_file.write(get_standard_queries())
+            standard_query_file.flush()
+            config_dict = get_codegen_config(
+                schema_path=schema_file.name,
+                queries_path=queries_path,
+                target_package_name=target_package,
+            )
+            generate_graphql_client(config_dict)
+    except httpx.RequestError as e:
+        console_log.error(f"An error occurred while downloading the schema: {e}")
+        sys.exit(1)
