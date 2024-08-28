@@ -1,7 +1,7 @@
 # fragment-python
 
 ```python
-from .fragment_graphql_client.client import Client
+from .fragment.sdk.client import Client
 
 graphql_client = Client(
     client_id="<client id from the dashboard>",

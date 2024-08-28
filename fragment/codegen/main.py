@@ -30,7 +30,13 @@ GRAPHQL_SCHEMA_API_URL = "https://api.us-west-2.fragment.dev/schema.graphql"
     help="The package name for the generated SDK",
     required=False,
 )
-def run(queries_path, target_package):
+@click.option(
+    "--target-package-path",
+    default=None,
+    help="The target directory for the generated SDK. Defaults to CWD.",
+    required=False,
+)
+def run(queries_path, target_package, target_package_path=None):
     console_log.info(f"Downloading the GraphQL schema from {GRAPHQL_SCHEMA_API_URL}")
     try:
         r = httpx.get(GRAPHQL_SCHEMA_API_URL)
@@ -49,6 +55,7 @@ def run(queries_path, target_package):
                 schema_path=schema_file.name,
                 queries_path=queries_path,
                 target_package_name=target_package,
+                target_package_path=target_package_path,
             )
             generate_graphql_client(config_dict)
     except httpx.RequestError as e:

@@ -15,4 +15,4 @@ typecheck:
 	poetry run mypy -p fragment
 
 build: install
-	poetry run fragment-python-client-codegen --queries-path=queries/ --target-package=fragment_graphql_client
+	poetry run fragment-python-client-codegen --queries-path=queries/ --target-package=sdk --target-package-path fragment/

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 
 def get_project_path_relative_to_file(path: str) -> str:
@@ -14,7 +14,11 @@ def get_project_path_relative_to_file(path: str) -> str:
 
 
 def get_codegen_config(
-    *, schema_path: str, queries_path: str, target_package_name: str
+    *,
+    schema_path: str,
+    queries_path: str,
+    target_package_name: str,
+    target_package_path: Optional[str] = None
 ) -> Dict:
     """Get the configuration for the codegen tool."""
     return dict(
@@ -23,6 +27,7 @@ def get_codegen_config(
                 schema_path=schema_path,
                 queries_path=queries_path,
                 target_package_name=target_package_name,
+                target_package_path=target_package_path if target_package_path else Path.cwd(),
                 base_client_name="AsyncFragmentClient",
                 base_client_file_path=get_project_path_relative_to_file(
                     "../../client/async_client.py"
