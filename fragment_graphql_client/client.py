@@ -14,7 +14,6 @@ from .get_ledger_account_balance import GetLedgerAccountBalance
 from .get_ledger_account_lines import GetLedgerAccountLines
 from .get_ledger_entry import GetLedgerEntry
 from .get_schema import GetSchema
-from .get_workspace import GetWorkspace
 from .input_types import (
     CreateLedgerInput,
     CurrencyMatchInput,
@@ -1041,21 +1040,3 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return ListLedgerEntries.model_validate(data)
-
-    async def get_workspace(self, **kwargs: Any) -> GetWorkspace:
-        query = gql(
-            """
-            query getWorkspace {
-              workspace {
-                id
-                name
-              }
-            }
-            """
-        )
-        variables: Dict[str, object] = {}
-        response = await self.execute(
-            query=query, operation_name="getWorkspace", variables=variables, **kwargs
-        )
-        data = self.get_data(response)
-        return GetWorkspace.model_validate(data)

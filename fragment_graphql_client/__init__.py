@@ -74,7 +74,6 @@ from .get_ledger_entry import (
     GetLedgerEntryLedgerEntryLinesNodesAccount,
 )
 from .get_schema import GetSchema, GetSchemaSchema, GetSchemaSchemaVersion
-from .get_workspace import GetWorkspace, GetWorkspaceWorkspace
 from .input_types import (
     ChartOfAccountsInput,
     CreateCustomCurrencyInput,
@@ -321,8 +320,6 @@ __all__ = [
     "GetSchema",
     "GetSchemaSchema",
     "GetSchemaSchemaVersion",
-    "GetWorkspace",
-    "GetWorkspaceWorkspace",
     "GroupBalanceAccountFilter",
     "IncreaseEnv",
     "Int96ConditionInput",
