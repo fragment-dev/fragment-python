@@ -92,14 +92,14 @@ query getSchemaName($key: SafeString!) {
 2. Run `fragment-python-client-codegen` to generate the GraphQL SDK client. GraphQL named queries are converted to snake_case to conform to Python's code conventions.
 ```bash
 fragment-python-client-codegen \
-  --queries-path queries/ \
-  --target-package=custom_queries_package \
-  --target-package-directory=your_product_libs
+  --input-dir queries/ \
+  --target-package-name=custom_queries_package \
+  --output-dir=libs/fragment
 ```
 3. Use the client from the generated package in your product! Apart from the custom query methods, this client is functionally identical to `fragment.sdk.client.Client`
 
 ```python
-from .your_product_libs.custom_queries_package.client import Client
+from .libs.custom_queries_package.client import Client
 
 graphql_client = Client(
     client_id="<client id from the dashboard>",
