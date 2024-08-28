@@ -18,7 +18,7 @@ config_dict = dict(
             target_package_name="fragment_graphql_client",
             base_client_name="AsyncFragmentClient",
             base_client_file_path="fragment/client/async_client.py",
-            plugins=["fragment.codegen.plugins.arguments.ArgumentGeneratorPlugin"],
+            plugins=["fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments"],
         ),
     },
 )

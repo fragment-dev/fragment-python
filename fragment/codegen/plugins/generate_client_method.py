@@ -15,7 +15,7 @@ def is_ignorable_ast_node(node: ast.expr) -> bool:
     return node is None or isinstance(node, ast.Name)
 
 
-class ArgumentGeneratorPlugin(Plugin):
+class RewriteUnsetTypeMethodArguments(Plugin):
     def generate_client_method(
         self,
         method_def: Union[ast.FunctionDef, ast.AsyncFunctionDef],
