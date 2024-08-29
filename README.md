@@ -42,6 +42,26 @@ loop.run_until_complete(print_schema())
 
 Read the [Using custom queries](#using-custom-queries) section to learn how to use your own GraphQL queries with the SDK.
 
+### Using a synchronous client
+
+If you prefer using a synchronous client instead of an async one, then:
+
+```python
+from fragment.sync_sdk.client import Client
+
+graphql_client = Client(
+    client_id="<client id from the dashboard>",
+    client_secret="<client secret from the dashboard>",
+    api_url="<api url from the dashboard>",
+    auth_url="<auth url from the dashboard>",
+    auth_scope="<auth scope from the dashboard>",
+  )
+
+get_schema_result = graphql_client.get_schema("<Your schema key here>")
+print(get_schema_result.schema_.json())
+
+```
+
 ## Examples
 
 ### Post a Ledger Entry
@@ -89,7 +109,7 @@ query getSchemaName($key: SafeString!) {
   }
 }
 ```
-2. Run `fragment-python-client-codegen` to generate the GraphQL SDK client. GraphQL named queries are converted to snake_case to conform to Python's code conventions.
+2. Run `fragment-python-client-codegen` to generate the GraphQL SDK client. GraphQL named queries are converted to snake_case to conform to Python's code conventions. Optionally, pass the `--sync` flag to generate a synchronous client instead of the default async GraphQL client.
 ```bash
 fragment-python-client-codegen \
   --input-dir queries/ \
