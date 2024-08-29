@@ -111,7 +111,7 @@ graphql_client = Client(
 
 async def print_schema_name():
   # Note that getSchemaName is converted to snake_case automatically
-  response = await graphql_client.get_schema_name()
+  response = await graphql_client.get_schema_name("<Your Schema Key>")
   print(response.schema_.key)
 
 import asyncio
