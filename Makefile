@@ -15,7 +15,7 @@ typecheck:
 	poetry run mypy -p fragment
 
 build: install
-	poetry run fragment-python-client-codegen --queries-path=queries/ --target-package=sdk --target-package-path fragment/
+	poetry run fragment-python-client-codegen --input-dir=queries/ --target-package-name=sdk --output-dir fragment/
 
 docker-build:
 	docker build -t fragment-python-sdk-dev .

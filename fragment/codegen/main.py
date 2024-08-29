@@ -17,45 +17,46 @@ GRAPHQL_SCHEMA_API_URL = "https://api.us-west-2.fragment.dev/schema.graphql"
 
 @click.command()
 @click.option(
-    "-q",
-    "--queries-path",
+    "-i",
+    "--input-dir",
     default=None,
     help="Path to your Schema queries",
     required=True,
 )
 @click.option(
-    "-t",
-    "--target-package",
+    "-n",
+    "--target-package-name",
     default="fragment_graphql_client",
     help="The package name for the generated SDK",
     required=False,
 )
 @click.option(
-    "--target-package-path",
+    "-o",
+    "--output-dir",
     default=None,
-    help="The target directory for the generated SDK. Defaults to CWD.",
+    help="The output directory for the generated SDK. Defaults to CWD.",
     required=False,
 )
-def run(queries_path, target_package, target_package_path=None):
+def run(input_dir, target_package_name, output_dir=None):
     console_log.info(f"Downloading the GraphQL schema from {GRAPHQL_SCHEMA_API_URL}")
     try:
         r = httpx.get(GRAPHQL_SCHEMA_API_URL)
         with tempfile.NamedTemporaryFile(
             mode="w"
         ) as schema_file, tempfile.NamedTemporaryFile(
-            dir=queries_path, mode="w", suffix=".graphql"
+            dir=input_dir, mode="w", suffix=".graphql"
         ) as standard_query_file:
             # Write and flush the most recent schema
             schema_file.write(r.text)
             schema_file.flush()
-            # Write and flush the standard queries to the provided queries_path
+            # Write and flush the standard queries to the provided input
             standard_query_file.write(get_standard_queries())
             standard_query_file.flush()
             config_dict = get_codegen_config(
                 schema_path=schema_file.name,
-                queries_path=queries_path,
-                target_package_name=target_package,
-                target_package_path=target_package_path,
+                queries_path=input_dir,
+                target_package_name=target_package_name,
+                target_package_path=output_dir,
             )
             generate_graphql_client(config_dict)
     except httpx.RequestError as e:

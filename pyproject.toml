@@ -5,9 +5,9 @@ target_package_name = "fragment_graphql_client"
 
 [tool.poetry]
 name = "fragment-python"
-version = "0.1.0"
+version = "0.1.2"
 description = "Python SDK for https://fragment.dev/"
-authors = ["Your Name <you@example.com>"]
+authors = ["Fragment Foundries Inc"]
 license = "Apache 2.0"
 readme = "README.md"
 packages = [{include = "fragment"}]
