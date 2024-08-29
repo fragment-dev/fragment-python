@@ -109,7 +109,7 @@ graphql_client = Client(
     auth_scope="<auth scope from the dashboard>",
   )
 
-async print_schema_name():
+async def print_schema_name():
   # Note that getSchemaName is converted to snake_case automatically
   response = await graphql_client.get_schema_name()
   print(response.schema_.key)
