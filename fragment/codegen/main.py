@@ -37,7 +37,13 @@ GRAPHQL_SCHEMA_API_URL = "https://api.us-west-2.fragment.dev/schema.graphql"
     help="The output directory for the generated SDK. Defaults to CWD.",
     required=False,
 )
-def run(input_dir, target_package_name, output_dir=None):
+@click.option(
+    "--sync",
+    help="Generate a synchronous client. Defaults to async.",
+    required=False,
+    is_flag=True,
+)
+def run(input_dir, target_package_name, sync, output_dir=None):
     console_log.info(f"Downloading the GraphQL schema from {GRAPHQL_SCHEMA_API_URL}")
     try:
         r = httpx.get(GRAPHQL_SCHEMA_API_URL)
@@ -53,6 +59,7 @@ def run(input_dir, target_package_name, output_dir=None):
             standard_query_file.write(get_standard_queries())
             standard_query_file.flush()
             config_dict = get_codegen_config(
+                use_sync_client=sync,
                 schema_path=schema_file.name,
                 queries_path=input_dir,
                 target_package_name=target_package_name,
