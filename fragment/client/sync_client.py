@@ -4,9 +4,7 @@ import time
 from typing import Any, Dict, Optional
 
 import httpx
-from ariadne_codegen.client_generators.dependencies.base_client import (
-    BaseClient,
-)
+from ariadne_codegen.client_generators.dependencies.base_client import BaseClient
 from authlib.integrations.httpx_client import OAuth2Client
 
 from fragment.exceptions import MissingArgumentException, MissingTokenException
@@ -20,7 +18,7 @@ class SyncFragmentClient(BaseClient):
         auth_scope: str = "",
         client_id: str = "",
         client_secret: str = "",
-        http_client: Optional[httpx.AsyncClient] = None,
+        http_client: Optional[httpx.Client] = None,
     ):
         if api_url == "":
             raise MissingArgumentException("api_url")
@@ -37,9 +35,7 @@ class SyncFragmentClient(BaseClient):
         self.auth_url = auth_url
         self.expiration_time = None
         self.token = None
-        self.oauth2_client = OAuth2Client(
-            client_id, client_secret, scope=auth_scope
-        )
+        self.oauth2_client = OAuth2Client(client_id, client_secret, scope=auth_scope)
 
     def refresh_token(self):
         now = time.time()
