@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 from .add_ledger_entry import AddLedgerEntry
 from .add_ledger_entry_runtime import AddLedgerEntryRuntime
-from .async_client import AsyncFragmentClient
 from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
 from .enums import ReadBalanceConsistencyMode
@@ -40,6 +39,7 @@ from .list_multi_currency_ledger_account_balances import (
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
 from .store_schema import StoreSchema
+from .sync_client import SyncFragmentClient
 from .sync_custom_accounts import SyncCustomAccounts
 from .sync_custom_txs import SyncCustomTxs
 from .update_ledger import UpdateLedger
@@ -50,8 +50,8 @@ def gql(q: str) -> str:
     return q
 
 
-class Client(AsyncFragmentClient):
-    async def store_schema(self, schema: SchemaInput, **kwargs: Any) -> StoreSchema:
+class Client(SyncFragmentClient):
+    def store_schema(self, schema: SchemaInput, **kwargs: Any) -> StoreSchema:
         query = gql(
             """
             mutation storeSchema($schema: SchemaInput!) {
@@ -77,13 +77,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"schema": schema}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="storeSchema", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return StoreSchema.model_validate(data)
 
-    async def create_ledger(
+    def create_ledger(
         self, ik: Any, ledger: CreateLedgerInput, schema_key: Any, **kwargs: Any
     ) -> CreateLedger:
         query = gql(
@@ -117,13 +117,13 @@ class Client(AsyncFragmentClient):
             "ledger": ledger,
             "schemaKey": schema_key,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="createLedger", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return CreateLedger.model_validate(data)
 
-    async def add_ledger_entry(
+    def add_ledger_entry(
         self,
         ik: Any,
         ledger_ik: Any,
@@ -177,13 +177,13 @@ class Client(AsyncFragmentClient):
             "tags": tags,
             "groups": groups,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="addLedgerEntry", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return AddLedgerEntry.model_validate(data)
 
-    async def add_ledger_entry_runtime(
+    def add_ledger_entry_runtime(
         self,
         ik: Any,
         type: str,
@@ -237,7 +237,7 @@ class Client(AsyncFragmentClient):
             "tags": tags,
             "groups": groups,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="addLedgerEntryRuntime",
             variables=variables,
@@ -246,7 +246,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return AddLedgerEntryRuntime.model_validate(data)
 
-    async def reconcile_tx(
+    def reconcile_tx(
         self,
         ledger_ik: Any,
         type: str,
@@ -296,13 +296,13 @@ class Client(AsyncFragmentClient):
             "tags": tags,
             "groups": groups,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="reconcileTx", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return ReconcileTx.model_validate(data)
 
-    async def reconcile_tx_runtime(
+    def reconcile_tx_runtime(
         self,
         ledger_ik: Any,
         type: str,
@@ -352,7 +352,7 @@ class Client(AsyncFragmentClient):
             "tags": tags,
             "groups": groups,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="reconcileTxRuntime",
             variables=variables,
@@ -361,7 +361,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return ReconcileTxRuntime.model_validate(data)
 
-    async def update_ledger_entry(
+    def update_ledger_entry(
         self,
         entry_ik: Any,
         ledger_ik: Any,
@@ -415,7 +415,7 @@ class Client(AsyncFragmentClient):
             "ledgerIk": ledger_ik,
             "update": update,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="updateLedgerEntry",
             variables=variables,
@@ -424,7 +424,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return UpdateLedgerEntry.model_validate(data)
 
-    async def update_ledger(
+    def update_ledger(
         self, ledger_ik: Any, update: UpdateLedgerInput, **kwargs: Any
     ) -> UpdateLedger:
         query = gql(
@@ -449,15 +449,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"ledgerIk": ledger_ik, "update": update}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="updateLedger", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return UpdateLedger.model_validate(data)
 
-    async def create_custom_link(
-        self, name: str, ik: Any, **kwargs: Any
-    ) -> CreateCustomLink:
+    def create_custom_link(self, name: str, ik: Any, **kwargs: Any) -> CreateCustomLink:
         query = gql(
             """
             mutation createCustomLink($name: String!, $ik: SafeString!) {
@@ -481,7 +479,7 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"name": name, "ik": ik}
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="createCustomLink",
             variables=variables,
@@ -490,7 +488,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return CreateCustomLink.model_validate(data)
 
-    async def sync_custom_accounts(
+    def sync_custom_accounts(
         self, link_id: str, accounts: List[CustomAccountInput], **kwargs: Any
     ) -> SyncCustomAccounts:
         query = gql(
@@ -519,7 +517,7 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"linkId": link_id, "accounts": accounts}
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="syncCustomAccounts",
             variables=variables,
@@ -528,7 +526,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return SyncCustomAccounts.model_validate(data)
 
-    async def sync_custom_txs(
+    def sync_custom_txs(
         self, link_id: str, txs: List[CustomTxInput], **kwargs: Any
     ) -> SyncCustomTxs:
         query = gql(
@@ -558,13 +556,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"linkId": link_id, "txs": txs}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="syncCustomTxs", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return SyncCustomTxs.model_validate(data)
 
-    async def get_ledger(self, ik: Any, **kwargs: Any) -> GetLedger:
+    def get_ledger(self, ik: Any, **kwargs: Any) -> GetLedger:
         query = gql(
             """
             query getLedger($ik: SafeString!) {
@@ -579,13 +577,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"ik": ik}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="getLedger", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return GetLedger.model_validate(data)
 
-    async def get_ledger_entry(
+    def get_ledger_entry(
         self, ik: Any, ledger_ik: Any, **kwargs: Any
     ) -> GetLedgerEntry:
         query = gql(
@@ -611,13 +609,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"ik": ik, "ledgerIk": ledger_ik}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="getLedgerEntry", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return GetLedgerEntry.model_validate(data)
 
-    async def list_ledger_accounts(
+    def list_ledger_accounts(
         self,
         ledger_ik: Any,
         after: Optional[str] = None,
@@ -658,7 +656,7 @@ class Client(AsyncFragmentClient):
             "first": first,
             "before": before,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="listLedgerAccounts",
             variables=variables,
@@ -667,7 +665,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return ListLedgerAccounts.model_validate(data)
 
-    async def list_ledger_account_balances(
+    def list_ledger_account_balances(
         self,
         ledger_ik: Any,
         after: Optional[str] = None,
@@ -721,7 +719,7 @@ class Client(AsyncFragmentClient):
             "balanceAt": balance_at,
             "ownBalanceConsistencyMode": own_balance_consistency_mode,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="listLedgerAccountBalances",
             variables=variables,
@@ -730,7 +728,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return ListLedgerAccountBalances.model_validate(data)
 
-    async def list_multi_currency_ledger_account_balances(
+    def list_multi_currency_ledger_account_balances(
         self,
         ledger_ik: Any,
         after: Optional[str] = None,
@@ -802,7 +800,7 @@ class Client(AsyncFragmentClient):
             "balanceAt": balance_at,
             "ownBalancesConsistencyMode": own_balances_consistency_mode,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="listMultiCurrencyLedgerAccountBalances",
             variables=variables,
@@ -811,7 +809,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return ListMultiCurrencyLedgerAccountBalances.model_validate(data)
 
-    async def get_ledger_account_lines(
+    def get_ledger_account_lines(
         self,
         path: str,
         ledger_ik: Any,
@@ -854,7 +852,7 @@ class Client(AsyncFragmentClient):
             "before": before,
             "filter": filter,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="getLedgerAccountLines",
             variables=variables,
@@ -863,7 +861,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return GetLedgerAccountLines.model_validate(data)
 
-    async def get_ledger_account_balance(
+    def get_ledger_account_balance(
         self,
         path: str,
         ledger_ik: Any,
@@ -894,7 +892,7 @@ class Client(AsyncFragmentClient):
             "balanceAt": balance_at,
             "ownBalanceConsistencyMode": own_balance_consistency_mode,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="getLedgerAccountBalance",
             variables=variables,
@@ -903,7 +901,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return GetLedgerAccountBalance.model_validate(data)
 
-    async def get_schema(
+    def get_schema(
         self, key: Any, version: Optional[int] = None, **kwargs: Any
     ) -> GetSchema:
         query = gql(
@@ -922,13 +920,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {"key": key, "version": version}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="getSchema", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return GetSchema.model_validate(data)
 
-    async def list_ledger_entries(
+    def list_ledger_entries(
         self,
         ledger_ik: Any,
         after: Optional[str] = None,
@@ -973,7 +971,7 @@ class Client(AsyncFragmentClient):
             "before": before,
             "filter": filter,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="listLedgerEntries",
             variables=variables,
@@ -982,7 +980,7 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return ListLedgerEntries.model_validate(data)
 
-    async def get_workspace(self, **kwargs: Any) -> GetWorkspace:
+    def get_workspace(self, **kwargs: Any) -> GetWorkspace:
         query = gql(
             """
             query getWorkspace {
@@ -994,13 +992,13 @@ class Client(AsyncFragmentClient):
             """
         )
         variables: Dict[str, object] = {}
-        response = await self.execute(
+        response = self.execute(
             query=query, operation_name="getWorkspace", variables=variables, **kwargs
         )
         data = self.get_data(response)
         return GetWorkspace.model_validate(data)
 
-    async def list_ledger_entry_group_balances(
+    def list_ledger_entry_group_balances(
         self,
         ledger_ik: Any,
         group_key: Any,
@@ -1061,7 +1059,7 @@ class Client(AsyncFragmentClient):
             "last": last,
             "filter": filter,
         }
-        response = await self.execute(
+        response = self.execute(
             query=query,
             operation_name="listLedgerEntryGroupBalances",
             variables=variables,
