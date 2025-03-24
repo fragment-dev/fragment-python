@@ -136,6 +136,15 @@ class GroupBalanceAccountFilter(BaseModel):
     path: Optional["StringMatchFilter"] = None
 
 
+class GroupFilter(BaseModel):
+    key_in: Optional[List[Any]] = Field(alias="keyIn", default=None)
+    not_: Optional["GroupNotFilter"] = Field(alias="not", default=None)
+
+
+class GroupNotFilter(BaseModel):
+    key_in: Optional[List[Any]] = Field(alias="keyIn", default=None)
+
+
 class Int96ConditionInput(BaseModel):
     eq: Optional[Any] = None
     gte: Optional[Any] = None
@@ -202,10 +211,14 @@ class LedgerAccountsFilterSet(BaseModel):
 
 class LedgerEntriesFilterSet(BaseModel):
     date: Optional["DateFilter"] = None
+    group: Optional["GroupFilter"] = None
+    is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
+    is_reversed: Optional[bool] = Field(alias="isReversed", default=None)
     ledger_entry: Optional["LedgerEntryFilter"] = Field(
         alias="ledgerEntry", default=None
     )
     posted: Optional["DateTimeFilter"] = None
+    show_hidden: Optional[bool] = Field(alias="showHidden", default=None)
     tag: Optional["TagFilter"] = None
     type: Optional["StringFilter"] = None
 
@@ -242,6 +255,7 @@ class LedgerEntryGroupMatchInput(BaseModel):
 class LedgerEntryGroupsFilterSet(BaseModel):
     created: Optional["DateTimeFilter"] = None
     key: Optional["StringFilter"] = None
+    value: Optional["StringFilter"] = None
 
 
 class LedgerEntryInput(BaseModel):
@@ -254,6 +268,7 @@ class LedgerEntryInput(BaseModel):
     posted: Optional[Any] = None
     tags: Optional[List["LedgerEntryTagInput"]] = None
     type: Optional[str] = None
+    version: Optional[int] = None
 
 
 class LedgerEntryMatchInput(BaseModel):
@@ -283,8 +298,11 @@ class LedgerLineMatchInput(BaseModel):
 class LedgerLinesFilterSet(BaseModel):
     created: Optional["DateTimeFilter"] = None
     date: Optional["DateFilter"] = None
+    is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
+    is_reversed: Optional[bool] = Field(alias="isReversed", default=None)
     key: Optional["StringFilter"] = None
     posted: Optional["DateTimeFilter"] = None
+    show_hidden: Optional[bool] = Field(alias="showHidden", default=None)
     type: Optional["TxTypeFilter"] = None
 
 
@@ -406,6 +424,7 @@ class SchemaLedgerEntryInput(BaseModel):
     parameters: Optional[Any] = None
     tags: Optional[List["SchemaLedgerEntryTagInput"]] = None
     type: Any
+    version: Optional[int] = None
 
 
 class SchemaLedgerEntryTagInput(BaseModel):
@@ -435,15 +454,19 @@ class SchemaTxMatchInput(BaseModel):
 class StringFilter(BaseModel):
     equal_to: Optional[str] = Field(alias="equalTo", default=None)
     in_: Optional[List[str]] = Field(alias="in", default=None)
+    not_equal_to: Optional[str] = Field(alias="notEqualTo", default=None)
+    not_in: Optional[List[str]] = Field(alias="notIn", default=None)
 
 
 class StringMatchFilter(BaseModel):
+    contains: Optional[str] = None
     equal_to: Optional[str] = Field(alias="equalTo", default=None)
     in_: Optional[List[str]] = Field(alias="in", default=None)
     matches: Optional[str] = None
 
 
 class TagFilter(BaseModel):
+    contains: Optional["TagMatchInput"] = None
     equal_to: Optional["TagMatchInput"] = Field(alias="equalTo", default=None)
     in_: Optional[List["TagMatchInput"]] = Field(alias="in", default=None)
 
