@@ -204,6 +204,12 @@ class ExternalTxSource(str, Enum):
     increase = "increase"
 
 
+class Granularity(str, Enum):
+    daily = "daily"
+    hourly = "hourly"
+    monthly = "monthly"
+
+
 class IncreaseEnv(str, Enum):
     production = "production"
     sandbox = "sandbox"

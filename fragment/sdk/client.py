@@ -8,6 +8,9 @@ from .add_ledger_entry_runtime import AddLedgerEntryRuntime
 from .async_client import AsyncFragmentClient
 from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
+from .delete_custom_txs import DeleteCustomTxs
+from .delete_ledger import DeleteLedger
+from .delete_schema import DeleteSchema
 from .enums import ReadBalanceConsistencyMode
 from .get_ledger import GetLedger
 from .get_ledger_account_balance import GetLedgerAccountBalance
@@ -26,7 +29,9 @@ from .input_types import (
     LedgerEntryTagInput,
     LedgerLineInput,
     LedgerLinesFilterSet,
+    LedgerMatchInput,
     SchemaInput,
+    SchemaMatchInput,
     UpdateLedgerEntryInput,
     UpdateLedgerInput,
 )
@@ -39,6 +44,7 @@ from .list_multi_currency_ledger_account_balances import (
 )
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
+from .reverse_ledger_entry import ReverseLedgerEntry
 from .store_schema import StoreSchema
 from .sync_custom_accounts import SyncCustomAccounts
 from .sync_custom_txs import SyncCustomTxs
@@ -83,6 +89,33 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return StoreSchema.model_validate(data)
 
+    async def delete_schema(
+        self, schema: SchemaMatchInput, **kwargs: Any
+    ) -> DeleteSchema:
+        query = gql(
+            """
+            mutation deleteSchema($schema: SchemaMatchInput!) {
+              deleteSchema(schema: $schema) {
+                __typename
+                ... on DeleteSchemaResult {
+                  success
+                }
+                ... on Error {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"schema": schema}
+        response = await self.execute(
+            query=query, operation_name="deleteSchema", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return DeleteSchema.model_validate(data)
+
     async def create_ledger(
         self, ik: Any, ledger: CreateLedgerInput, schema_key: Any, **kwargs: Any
     ) -> CreateLedger:
@@ -122,6 +155,33 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return CreateLedger.model_validate(data)
+
+    async def delete_ledger(
+        self, ledger: LedgerMatchInput, **kwargs: Any
+    ) -> DeleteLedger:
+        query = gql(
+            """
+            mutation deleteLedger($ledger: LedgerMatchInput!) {
+              deleteLedger(ledger: $ledger) {
+                __typename
+                ... on DeleteLedgerResult {
+                  success
+                }
+                ... on Error {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"ledger": ledger}
+        response = await self.execute(
+            query=query, operation_name="deleteLedger", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return DeleteLedger.model_validate(data)
 
     async def add_ledger_entry(
         self,
@@ -183,6 +243,70 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return AddLedgerEntry.model_validate(data)
 
+    async def reverse_ledger_entry(self, id: str, **kwargs: Any) -> ReverseLedgerEntry:
+        query = gql(
+            """
+            mutation reverseLedgerEntry($id: ID!) {
+              reverseLedgerEntry(id: $id) {
+                __typename
+                ... on ReverseLedgerEntryResult {
+                  reversingLedgerEntry {
+                    ik
+                    id
+                    created
+                    posted
+                    type
+                    description
+                    hidden
+                    lines {
+                      nodes {
+                        id
+                        amount
+                        account {
+                          path
+                        }
+                      }
+                    }
+                  }
+                  reversedLedgerEntry {
+                    ik
+                    id
+                    created
+                    posted
+                    type
+                    description
+                    hidden
+                    lines {
+                      nodes {
+                        id
+                        amount
+                        account {
+                          path
+                        }
+                      }
+                    }
+                  }
+                  isIkReplay
+                }
+                ... on Error {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"id": id}
+        response = await self.execute(
+            query=query,
+            operation_name="reverseLedgerEntry",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return ReverseLedgerEntry.model_validate(data)
+
     async def add_ledger_entry_runtime(
         self,
         ik: Any,
@@ -190,16 +314,17 @@ class Client(AsyncFragmentClient):
         ledger_ik: Any,
         lines: List[LedgerLineInput],
         posted: Optional[Any] = None,
+        parameters: Optional[Any] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
         **kwargs: Any
     ) -> AddLedgerEntryRuntime:
         query = gql(
             """
-            mutation addLedgerEntryRuntime($ik: SafeString!, $type: String!, $ledgerIk: SafeString!, $posted: DateTime, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation addLedgerEntryRuntime($ik: SafeString!, $type: String!, $ledgerIk: SafeString!, $posted: DateTime, $parameters: JSON, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               addLedgerEntry(
                 ik: $ik
-                entry: {type: $type, ledger: {ik: $ledgerIk}, posted: $posted, lines: $lines, tags: $tags, groups: $groups}
+                entry: {type: $type, ledger: {ik: $ledgerIk}, posted: $posted, lines: $lines, tags: $tags, groups: $groups, parameters: $parameters}
               ) {
                 __typename
                 ... on AddLedgerEntryResult {
@@ -233,6 +358,7 @@ class Client(AsyncFragmentClient):
             "type": type,
             "ledgerIk": ledger_ik,
             "posted": posted,
+            "parameters": parameters,
             "lines": lines,
             "tags": tags,
             "groups": groups,
@@ -307,15 +433,16 @@ class Client(AsyncFragmentClient):
         ledger_ik: Any,
         type: str,
         lines: List[LedgerLineInput],
+        parameters: Optional[Any] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
         **kwargs: Any
     ) -> ReconcileTxRuntime:
         query = gql(
             """
-            mutation reconcileTxRuntime($ledgerIk: SafeString!, $type: String!, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation reconcileTxRuntime($ledgerIk: SafeString!, $type: String!, $lines: [LedgerLineInput!]!, $parameters: JSON, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               reconcileTx(
-                entry: {ledger: {ik: $ledgerIk}, type: $type, lines: $lines, tags: $tags, groups: $groups}
+                entry: {ledger: {ik: $ledgerIk}, type: $type, lines: $lines, tags: $tags, groups: $groups, parameters: $parameters}
               ) {
                 __typename
                 ... on ReconcileTxResult {
@@ -349,6 +476,7 @@ class Client(AsyncFragmentClient):
             "ledgerIk": ledger_ik,
             "type": type,
             "lines": lines,
+            "parameters": parameters,
             "tags": tags,
             "groups": groups,
         }
@@ -563,6 +691,42 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return SyncCustomTxs.model_validate(data)
+
+    async def delete_custom_txs(self, txs: List[str], **kwargs: Any) -> DeleteCustomTxs:
+        query = gql(
+            """
+            mutation deleteCustomTxs($txs: [ID!]!) {
+              deleteCustomTxs(txs: $txs) {
+                __typename
+                ... on DeleteCustomTxsResult {
+                  txs {
+                    tx {
+                      linkId
+                      id
+                      externalId
+                      externalAccountId
+                      amount
+                      description
+                      posted
+                      deletedAt
+                    }
+                  }
+                }
+                ... on Error {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"txs": txs}
+        response = await self.execute(
+            query=query, operation_name="deleteCustomTxs", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return DeleteCustomTxs.model_validate(data)
 
     async def get_ledger(self, ik: Any, **kwargs: Any) -> GetLedger:
         query = gql(
