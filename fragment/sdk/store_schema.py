@@ -18,10 +18,16 @@ class StoreSchema(BaseModel):
 
 class StoreSchemaStoreSchemaBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class StoreSchemaStoreSchemaInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class StoreSchemaStoreSchemaStoreSchemaResult(BaseModel):

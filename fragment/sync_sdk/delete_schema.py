@@ -18,6 +18,9 @@ class DeleteSchema(BaseModel):
 
 class DeleteSchemaDeleteSchemaBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class DeleteSchemaDeleteSchemaDeleteSchemaResult(BaseModel):
@@ -27,6 +30,9 @@ class DeleteSchemaDeleteSchemaDeleteSchemaResult(BaseModel):
 
 class DeleteSchemaDeleteSchemaInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 DeleteSchema.model_rebuild()
