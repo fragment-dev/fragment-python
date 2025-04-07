@@ -18,10 +18,16 @@ class ReconcileTxRuntime(BaseModel):
 
 class ReconcileTxRuntimeReconcileTxBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class ReconcileTxRuntimeReconcileTxInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class ReconcileTxRuntimeReconcileTxReconcileTxResult(BaseModel):

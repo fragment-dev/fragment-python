@@ -18,6 +18,9 @@ class CreateCustomLink(BaseModel):
 
 class CreateCustomLinkCreateCustomLinkBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class CreateCustomLinkCreateCustomLinkCreateCustomLinkResult(BaseModel):
@@ -34,6 +37,9 @@ class CreateCustomLinkCreateCustomLinkCreateCustomLinkResultLink(BaseModel):
 
 class CreateCustomLinkCreateCustomLinkInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 CreateCustomLink.model_rebuild()

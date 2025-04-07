@@ -18,10 +18,16 @@ class UpdateLedger(BaseModel):
 
 class UpdateLedgerUpdateLedgerBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class UpdateLedgerUpdateLedgerInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class UpdateLedgerUpdateLedgerUpdateLedgerResult(BaseModel):

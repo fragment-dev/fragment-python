@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from .add_ledger_entry import AddLedgerEntry
 from .add_ledger_entry_runtime import AddLedgerEntryRuntime
+from .create_custom_currency import CreateCustomCurrency
 from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
 from .delete_custom_txs import DeleteCustomTxs
@@ -73,7 +74,12 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -98,7 +104,12 @@ class Client(SyncFragmentClient):
                 ... on DeleteSchemaResult {
                   success
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -134,7 +145,12 @@ class Client(SyncFragmentClient):
                   }
                   isIkReplay
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -163,7 +179,12 @@ class Client(SyncFragmentClient):
                 ... on DeleteLedgerResult {
                   success
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -185,6 +206,7 @@ class Client(SyncFragmentClient):
         ledger_ik: Any,
         type: str,
         parameters: Any,
+        type_version: Optional[int] = None,
         posted: Optional[Any] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
@@ -192,10 +214,10 @@ class Client(SyncFragmentClient):
     ) -> AddLedgerEntry:
         query = gql(
             """
-            mutation addLedgerEntry($ik: SafeString!, $ledgerIk: SafeString!, $type: String!, $posted: DateTime, $parameters: JSON!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation addLedgerEntry($ik: SafeString!, $ledgerIk: SafeString!, $type: String!, $typeVersion: Int, $posted: DateTime, $parameters: JSON!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               addLedgerEntry(
                 ik: $ik
-                entry: {ledger: {ik: $ledgerIk}, type: $type, posted: $posted, parameters: $parameters, tags: $tags, groups: $groups}
+                entry: {ledger: {ik: $ledgerIk}, type: $type, typeVersion: $typeVersion, posted: $posted, parameters: $parameters, tags: $tags, groups: $groups}
               ) {
                 __typename
                 ... on AddLedgerEntryResult {
@@ -215,7 +237,12 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -228,6 +255,7 @@ class Client(SyncFragmentClient):
             "ik": ik,
             "ledgerIk": ledger_ik,
             "type": type,
+            "typeVersion": type_version,
             "posted": posted,
             "parameters": parameters,
             "tags": tags,
@@ -284,7 +312,12 @@ class Client(SyncFragmentClient):
                   }
                   isIkReplay
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -309,18 +342,18 @@ class Client(SyncFragmentClient):
         type: str,
         ledger_ik: Any,
         lines: List[LedgerLineInput],
+        type_version: Optional[int] = None,
         posted: Optional[Any] = None,
-        parameters: Optional[Any] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
         **kwargs: Any
     ) -> AddLedgerEntryRuntime:
         query = gql(
             """
-            mutation addLedgerEntryRuntime($ik: SafeString!, $type: String!, $ledgerIk: SafeString!, $posted: DateTime, $parameters: JSON, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation addLedgerEntryRuntime($ik: SafeString!, $type: String!, $typeVersion: Int, $ledgerIk: SafeString!, $posted: DateTime, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               addLedgerEntry(
                 ik: $ik
-                entry: {type: $type, ledger: {ik: $ledgerIk}, posted: $posted, lines: $lines, tags: $tags, groups: $groups, parameters: $parameters}
+                entry: {type: $type, typeVersion: $typeVersion, ledger: {ik: $ledgerIk}, posted: $posted, lines: $lines, tags: $tags, groups: $groups}
               ) {
                 __typename
                 ... on AddLedgerEntryResult {
@@ -340,7 +373,12 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -352,9 +390,9 @@ class Client(SyncFragmentClient):
         variables: Dict[str, object] = {
             "ik": ik,
             "type": type,
+            "typeVersion": type_version,
             "ledgerIk": ledger_ik,
             "posted": posted,
-            "parameters": parameters,
             "lines": lines,
             "tags": tags,
             "groups": groups,
@@ -373,15 +411,16 @@ class Client(SyncFragmentClient):
         ledger_ik: Any,
         type: str,
         parameters: Any,
+        type_version: Optional[int] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
         **kwargs: Any
     ) -> ReconcileTx:
         query = gql(
             """
-            mutation reconcileTx($ledgerIk: SafeString!, $type: String!, $parameters: JSON!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation reconcileTx($ledgerIk: SafeString!, $type: String!, $typeVersion: Int, $parameters: JSON!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               reconcileTx(
-                entry: {ledger: {ik: $ledgerIk}, type: $type, parameters: $parameters, tags: $tags, groups: $groups}
+                entry: {ledger: {ik: $ledgerIk}, type: $type, typeVersion: $typeVersion, parameters: $parameters, tags: $tags, groups: $groups}
               ) {
                 __typename
                 ... on ReconcileTxResult {
@@ -402,7 +441,12 @@ class Client(SyncFragmentClient):
                     externalTxId
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -414,6 +458,7 @@ class Client(SyncFragmentClient):
         variables: Dict[str, object] = {
             "ledgerIk": ledger_ik,
             "type": type,
+            "typeVersion": type_version,
             "parameters": parameters,
             "tags": tags,
             "groups": groups,
@@ -429,16 +474,16 @@ class Client(SyncFragmentClient):
         ledger_ik: Any,
         type: str,
         lines: List[LedgerLineInput],
-        parameters: Optional[Any] = None,
+        type_version: Optional[int] = None,
         tags: Optional[List[LedgerEntryTagInput]] = None,
         groups: Optional[List[LedgerEntryGroupInput]] = None,
         **kwargs: Any
     ) -> ReconcileTxRuntime:
         query = gql(
             """
-            mutation reconcileTxRuntime($ledgerIk: SafeString!, $type: String!, $lines: [LedgerLineInput!]!, $parameters: JSON, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
+            mutation reconcileTxRuntime($ledgerIk: SafeString!, $type: String!, $typeVersion: Int, $lines: [LedgerLineInput!]!, $tags: [LedgerEntryTagInput!], $groups: [LedgerEntryGroupInput!]) {
               reconcileTx(
-                entry: {ledger: {ik: $ledgerIk}, type: $type, lines: $lines, tags: $tags, groups: $groups, parameters: $parameters}
+                entry: {ledger: {ik: $ledgerIk}, type: $type, typeVersion: $typeVersion, lines: $lines, tags: $tags, groups: $groups}
               ) {
                 __typename
                 ... on ReconcileTxResult {
@@ -459,7 +504,12 @@ class Client(SyncFragmentClient):
                     externalTxId
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -471,8 +521,8 @@ class Client(SyncFragmentClient):
         variables: Dict[str, object] = {
             "ledgerIk": ledger_ik,
             "type": type,
+            "typeVersion": type_version,
             "lines": lines,
-            "parameters": parameters,
             "tags": tags,
             "groups": groups,
         }
@@ -526,9 +576,15 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
                   code
                   message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
                 }
               }
             }
@@ -563,7 +619,12 @@ class Client(SyncFragmentClient):
                     name
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -593,7 +654,12 @@ class Client(SyncFragmentClient):
                   }
                   isIkReplay
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -631,7 +697,12 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -670,7 +741,12 @@ class Client(SyncFragmentClient):
                     posted
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -706,7 +782,12 @@ class Client(SyncFragmentClient):
                     }
                   }
                 }
-                ... on Error {
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
                   code
                   message
                   retryable
@@ -1227,3 +1308,51 @@ class Client(SyncFragmentClient):
         )
         data = self.get_data(response)
         return ListLedgerEntryGroupBalances.model_validate(data)
+
+    def create_custom_currency(
+        self, id: Any, name: str, precision: int, custom_code: str, **kwargs: Any
+    ) -> CreateCustomCurrency:
+        query = gql(
+            """
+            mutation createCustomCurrency($id: SafeString!, $name: String!, $precision: Int!, $customCode: String!) {
+              createCustomCurrency(
+                customCurrency: {customCurrencyId: $id, name: $name, precision: $precision, customCode: $customCode}
+              ) {
+                __typename
+                ... on CreateCustomCurrencyResult {
+                  customCurrency {
+                    code
+                    customCurrencyId
+                    precision
+                    name
+                    customCode
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "id": id,
+            "name": name,
+            "precision": precision,
+            "customCode": custom_code,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="createCustomCurrency",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return CreateCustomCurrency.model_validate(data)

@@ -268,7 +268,7 @@ class LedgerEntryInput(BaseModel):
     posted: Optional[Any] = None
     tags: Optional[List["LedgerEntryTagInput"]] = None
     type: Optional[str] = None
-    version: Optional[int] = None
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
 
 
 class LedgerEntryMatchInput(BaseModel):
@@ -424,7 +424,7 @@ class SchemaLedgerEntryInput(BaseModel):
     parameters: Optional[Any] = None
     tags: Optional[List["SchemaLedgerEntryTagInput"]] = None
     type: Any
-    version: Optional[int] = None
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
 
 
 class SchemaLedgerEntryTagInput(BaseModel):

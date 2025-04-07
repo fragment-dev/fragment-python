@@ -43,10 +43,16 @@ class AddLedgerEntryRuntimeAddLedgerEntryAddLedgerEntryResultLinesAccount(BaseMo
 
 class AddLedgerEntryRuntimeAddLedgerEntryBadRequestError(BaseModel):
     typename__: Literal["BadRequestError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 class AddLedgerEntryRuntimeAddLedgerEntryInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
 
 
 AddLedgerEntryRuntime.model_rebuild()
