@@ -11,7 +11,7 @@ on:
         - major
 
 jobs:
-  updateQueries:
+  createRelease:
     runs-on: ubuntu-latest
     permissions:
       contents: read
