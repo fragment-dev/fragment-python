@@ -13,8 +13,10 @@ from .enums import (
     LedgerAccountTypes,
     LedgerLinesConsistencyMode,
     LedgerTypes,
+    LinkType,
     SceneEventType,
     SchemaConsistencyMode,
+    SchemaLedgerEntryStatus,
     TxType,
 )
 
@@ -137,8 +139,20 @@ class GroupBalanceAccountFilter(BaseModel):
 
 
 class GroupFilter(BaseModel):
+    equal_to: Optional["GroupMatchInput"] = Field(alias="equalTo", default=None)
+    in_: Optional[List["GroupMatchInput"]] = Field(alias="in", default=None)
+    key_equal_to: Optional[Any] = Field(alias="keyEqualTo", default=None)
     key_in: Optional[List[Any]] = Field(alias="keyIn", default=None)
     not_: Optional["GroupNotFilter"] = Field(alias="not", default=None)
+    not_equal_to: Optional["GroupMatchInput"] = Field(alias="notEqualTo", default=None)
+    not_in: Optional[List["GroupMatchInput"]] = Field(alias="notIn", default=None)
+    not_key_equal_to: Optional[Any] = Field(alias="notKeyEqualTo", default=None)
+    not_key_in: Optional[List[Any]] = Field(alias="notKeyIn", default=None)
+
+
+class GroupMatchInput(BaseModel):
+    key: Any
+    value: Any
 
 
 class GroupNotFilter(BaseModel):
@@ -221,6 +235,7 @@ class LedgerEntriesFilterSet(BaseModel):
     show_hidden: Optional[bool] = Field(alias="showHidden", default=None)
     tag: Optional["TagFilter"] = None
     type: Optional["StringFilter"] = None
+    type_version: Optional["StringFilter"] = Field(alias="typeVersion", default=None)
 
 
 class LedgerEntryConditionInput(BaseModel):
@@ -233,6 +248,12 @@ class LedgerEntryConditionInput(BaseModel):
 class LedgerEntryFilter(BaseModel):
     equal_to: Optional["LedgerEntryMatchInput"] = Field(alias="equalTo", default=None)
     in_: Optional[List["LedgerEntryMatchInput"]] = Field(alias="in", default=None)
+
+
+class LedgerEntryGroupBalanceFilter(BaseModel):
+    account: "GroupBalanceAccountFilter"
+    currency: Optional["CurrencyFilter"] = None
+    own_balance: Optional["Int96Filter"] = Field(alias="ownBalance", default=None)
 
 
 class LedgerEntryGroupBalanceFilterSet(BaseModel):
@@ -253,6 +274,7 @@ class LedgerEntryGroupMatchInput(BaseModel):
 
 
 class LedgerEntryGroupsFilterSet(BaseModel):
+    balance: Optional["LedgerEntryGroupBalanceFilter"] = None
     created: Optional["DateTimeFilter"] = None
     key: Optional["StringFilter"] = None
     value: Optional["StringFilter"] = None
@@ -325,9 +347,15 @@ class LinkMatchInput(BaseModel):
     id: str
 
 
+class MigrateLedgerEntryInput(BaseModel):
+    id: str
+    new_ledger_entry: "LedgerEntryInput" = Field(alias="newLedgerEntry")
+
+
 class SceneEntryInput(BaseModel):
     parameters: Optional[Any] = None
     type: Any
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
 
 
 class SceneEventInput(BaseModel):
@@ -359,6 +387,7 @@ class SchemaExternalAccountMatchInput(BaseModel):
     external_id: Optional[Any] = Field(alias="externalId", default=None)
     id: Optional[Any] = None
     link_id: Optional[Any] = Field(alias="linkId", default=None)
+    link_type: Optional[LinkType] = Field(alias="linkType", default=None)
 
 
 class SchemaInput(BaseModel):
@@ -422,6 +451,7 @@ class SchemaLedgerEntryInput(BaseModel):
     groups: Optional[List["SchemaLedgerEntryGroupInput"]] = None
     lines: Optional[List["SchemaLedgerLineInput"]] = None
     parameters: Optional[Any] = None
+    status: Optional[SchemaLedgerEntryStatus] = None
     tags: Optional[List["SchemaLedgerEntryTagInput"]] = None
     type: Any
     type_version: Optional[int] = Field(alias="typeVersion", default=None)
@@ -469,6 +499,12 @@ class TagFilter(BaseModel):
     contains: Optional["TagMatchInput"] = None
     equal_to: Optional["TagMatchInput"] = Field(alias="equalTo", default=None)
     in_: Optional[List["TagMatchInput"]] = Field(alias="in", default=None)
+    key_equal_to: Optional[Any] = Field(alias="keyEqualTo", default=None)
+    key_in: Optional[List[Any]] = Field(alias="keyIn", default=None)
+    not_equal_to: Optional["TagMatchInput"] = Field(alias="notEqualTo", default=None)
+    not_in: Optional[List["TagMatchInput"]] = Field(alias="notIn", default=None)
+    not_key_equal_to: Optional[Any] = Field(alias="notKeyEqualTo", default=None)
+    not_key_in: Optional[List[Any]] = Field(alias="notKeyIn", default=None)
 
 
 class TagMatchInput(BaseModel):
@@ -499,6 +535,9 @@ class UpdateLedgerAccountInput(BaseModel):
 class UpdateLedgerEntryInput(BaseModel):
     groups: Optional[List["LedgerEntryGroupInput"]] = None
     tags: Optional[List["LedgerEntryTagInput"]] = None
+    tags_to_remove: Optional[List["LedgerEntryTagInput"]] = Field(
+        alias="tagsToRemove", default=None
+    )
 
 
 class UpdateLedgerInput(BaseModel):

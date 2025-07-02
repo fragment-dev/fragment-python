@@ -239,6 +239,13 @@ class LedgerTypes(str, Enum):
     double = "double"
 
 
+class LinkType(str, Enum):
+    CustomLink = "CustomLink"
+    IncreaseLink = "IncreaseLink"
+    StripeLink = "StripeLink"
+    UnitLink = "UnitLink"
+
+
 class ReadBalanceConsistencyMode(str, Enum):
     eventual = "eventual"
     strong = "strong"
@@ -252,6 +259,12 @@ class SceneEventType(str, Enum):
 class SchemaConsistencyMode(str, Enum):
     eventual = "eventual"
     strong = "strong"
+
+
+class SchemaLedgerEntryStatus(str, Enum):
+    active = "active"
+    archived = "archived"
+    disabled = "disabled"
 
 
 class StripeEnv(str, Enum):
