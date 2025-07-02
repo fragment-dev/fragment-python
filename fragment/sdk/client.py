@@ -27,6 +27,7 @@ from .input_types import (
     LedgerEntriesFilterSet,
     LedgerEntryGroupBalanceFilterSet,
     LedgerEntryGroupInput,
+    LedgerEntryInput,
     LedgerEntryTagInput,
     LedgerLineInput,
     LedgerLinesFilterSet,
@@ -43,6 +44,7 @@ from .list_ledger_entry_group_balances import ListLedgerEntryGroupBalances
 from .list_multi_currency_ledger_account_balances import (
     ListMultiCurrencyLedgerAccountBalances,
 )
+from .migrate_ledger_entry import MigrateLedgerEntry
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
 from .reverse_ledger_entry import ReverseLedgerEntry
@@ -339,6 +341,98 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return ReverseLedgerEntry.model_validate(data)
+
+    async def migrate_ledger_entry(
+        self, id: str, new_ledger_entry: LedgerEntryInput, **kwargs: Any
+    ) -> MigrateLedgerEntry:
+        query = gql(
+            """
+            mutation migrateLedgerEntry($id: ID!, $newLedgerEntry: LedgerEntryInput!) {
+              migrateLedgerEntry(input: {id: $id, newLedgerEntry: $newLedgerEntry}) {
+                __typename
+                ... on MigrateLedgerEntryResult {
+                  reversingLedgerEntry {
+                    ik
+                    id
+                    created
+                    posted
+                    type
+                    description
+                    reversedAt
+                    hidden
+                    lines {
+                      nodes {
+                        id
+                        amount
+                        account {
+                          path
+                        }
+                      }
+                    }
+                  }
+                  reversedLedgerEntry {
+                    ik
+                    id
+                    created
+                    posted
+                    type
+                    description
+                    reversedAt
+                    hidden
+                    lines {
+                      nodes {
+                        id
+                        amount
+                        account {
+                          path
+                        }
+                      }
+                    }
+                  }
+                  newLedgerEntry {
+                    ik
+                    id
+                    created
+                    posted
+                    type
+                    description
+                    reversedAt
+                    hidden
+                    lines {
+                      nodes {
+                        id
+                        amount
+                        account {
+                          path
+                        }
+                      }
+                    }
+                  }
+                  isIkReplay
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {"id": id, "newLedgerEntry": new_ledger_entry}
+        response = await self.execute(
+            query=query,
+            operation_name="migrateLedgerEntry",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return MigrateLedgerEntry.model_validate(data)
 
     async def add_ledger_entry_runtime(
         self,
