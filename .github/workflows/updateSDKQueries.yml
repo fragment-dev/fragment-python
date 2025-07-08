@@ -2,6 +2,9 @@ on:
   workflow_dispatch:
 
 name: Update SDK queries
+permissions:
+  contents: read
+  pull-requests: write
 jobs:
   updateQueries:
     runs-on: ubuntu-latest
