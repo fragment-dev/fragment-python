@@ -222,6 +222,11 @@ class LedgerAccountTypes(str, Enum):
     liability = "liability"
 
 
+class LedgerDataMigrationStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
+
 class LedgerLinesConsistencyMode(str, Enum):
     eventual = "eventual"
     strong = "strong"
@@ -259,6 +264,12 @@ class SceneEventType(str, Enum):
 class SchemaConsistencyMode(str, Enum):
     eventual = "eventual"
     strong = "strong"
+
+
+class SchemaLedgerAccountStatus(str, Enum):
+    active = "active"
+    archived = "archived"
+    disabled = "disabled"
 
 
 class SchemaLedgerEntryStatus(str, Enum):
