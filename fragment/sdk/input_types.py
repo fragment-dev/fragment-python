@@ -11,11 +11,13 @@ from .enums import (
     CurrencyCode,
     CurrencyMode,
     LedgerAccountTypes,
+    LedgerDataMigrationStatus,
     LedgerLinesConsistencyMode,
     LedgerTypes,
     LinkType,
     SceneEventType,
     SchemaConsistencyMode,
+    SchemaLedgerAccountStatus,
     SchemaLedgerEntryStatus,
     TxType,
 )
@@ -184,6 +186,11 @@ class LedgerAccountConsistencyConfigInput(BaseModel):
     )
 
 
+class LedgerAccountDataMigrationsFilterSet(BaseModel):
+    account_path: Optional[Any] = Field(alias="accountPath", default=None)
+    status: Optional[LedgerDataMigrationStatus] = None
+
+
 class LedgerAccountFilter(BaseModel):
     equal_to: Optional["LedgerAccountMatchInput"] = Field(alias="equalTo", default=None)
     in_: Optional[List["LedgerAccountMatchInput"]] = Field(alias="in", default=None)
@@ -243,6 +250,12 @@ class LedgerEntryConditionInput(BaseModel):
     currency: Optional["CurrencyMatchInput"] = None
     postcondition: Optional["LedgerAccountConditionInput"] = None
     precondition: Optional["LedgerAccountConditionInput"] = None
+
+
+class LedgerEntryDataMigrationsFilterSet(BaseModel):
+    entry_type: Optional[Any] = Field(alias="entryType", default=None)
+    status: Optional[LedgerDataMigrationStatus] = None
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
 
 
 class LedgerEntryFilter(BaseModel):
@@ -319,6 +332,7 @@ class LedgerLineMatchInput(BaseModel):
 
 class LedgerLinesFilterSet(BaseModel):
     created: Optional["DateTimeFilter"] = None
+    currency: Optional["CurrencyFilter"] = None
     date: Optional["DateFilter"] = None
     is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
     is_reversed: Optional[bool] = Field(alias="isReversed", default=None)
@@ -421,6 +435,7 @@ class SchemaLedgerAccountInput(BaseModel):
         alias="linkedAccount", default=None
     )
     name: Optional[Any] = None
+    status: Optional[SchemaLedgerAccountStatus] = None
     template: Optional[bool] = None
     type: Optional[LedgerAccountTypes] = None
 

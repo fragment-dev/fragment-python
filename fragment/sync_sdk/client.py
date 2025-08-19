@@ -14,6 +14,9 @@ from .delete_schema import DeleteSchema
 from .enums import ReadBalanceConsistencyMode
 from .get_ledger import GetLedger
 from .get_ledger_account_balance import GetLedgerAccountBalance
+from .get_ledger_account_balance_with_child_rollup import (
+    GetLedgerAccountBalanceWithChildRollup,
+)
 from .get_ledger_account_lines import GetLedgerAccountLines
 from .get_ledger_entry import GetLedgerEntry
 from .get_schema import GetSchema
@@ -1235,6 +1238,40 @@ class Client(SyncFragmentClient):
         )
         data = self.get_data(response)
         return GetLedgerAccountBalance.model_validate(data)
+
+    def get_ledger_account_balance_with_child_rollup(
+        self,
+        path: str,
+        ledger_ik: Any,
+        balance_currency: Optional[CurrencyMatchInput] = None,
+        balance_at: Optional[Any] = None,
+        **kwargs: Any
+    ) -> GetLedgerAccountBalanceWithChildRollup:
+        query = gql(
+            """
+            query GetLedgerAccountBalanceWithChildRollup($path: String!, $ledgerIk: SafeString!, $balanceCurrency: CurrencyMatchInput, $balanceAt: LastMoment) {
+              ledgerAccount(ledgerAccount: {ledger: {ik: $ledgerIk}, path: $path}) {
+                id
+                path
+                balance(currency: $balanceCurrency, at: $balanceAt)
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "path": path,
+            "ledgerIk": ledger_ik,
+            "balanceCurrency": balance_currency,
+            "balanceAt": balance_at,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="GetLedgerAccountBalanceWithChildRollup",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetLedgerAccountBalanceWithChildRollup.model_validate(data)
 
     def get_schema(
         self, key: Any, version: Optional[int] = None, **kwargs: Any
