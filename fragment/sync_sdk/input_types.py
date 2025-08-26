@@ -187,7 +187,7 @@ class LedgerAccountConsistencyConfigInput(BaseModel):
 
 
 class LedgerAccountDataMigrationsFilterSet(BaseModel):
-    account_path: Optional[Any] = Field(alias="accountPath", default=None)
+    account_path: Optional["StringFilter"] = Field(alias="accountPath", default=None)
     status: Optional[LedgerDataMigrationStatus] = None
 
 
@@ -253,9 +253,9 @@ class LedgerEntryConditionInput(BaseModel):
 
 
 class LedgerEntryDataMigrationsFilterSet(BaseModel):
-    entry_type: Optional[Any] = Field(alias="entryType", default=None)
+    entry_type: Optional["StringFilter"] = Field(alias="entryType", default=None)
     status: Optional[LedgerDataMigrationStatus] = None
-    type_version: Optional[int] = Field(alias="typeVersion", default=None)
+    type_version: Optional["StringFilter"] = Field(alias="typeVersion", default=None)
 
 
 class LedgerEntryFilter(BaseModel):
