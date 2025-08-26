@@ -12,6 +12,14 @@ from .delete_custom_txs import DeleteCustomTxs
 from .delete_ledger import DeleteLedger
 from .delete_schema import DeleteSchema
 from .enums import ReadBalanceConsistencyMode
+from .get_account_data_migrations import GetAccountDataMigrations
+from .get_entries_to_migrate_for_ledger_account_data_migration import (
+    GetEntriesToMigrateForLedgerAccountDataMigration,
+)
+from .get_entries_to_migrate_for_ledger_entry_data_migration import (
+    GetEntriesToMigrateForLedgerEntryDataMigration,
+)
+from .get_entry_data_migrations import GetEntryDataMigrations
 from .get_ledger import GetLedger
 from .get_ledger_account_balance import GetLedgerAccountBalance
 from .get_ledger_account_balance_with_child_rollup import (
@@ -26,7 +34,9 @@ from .input_types import (
     CurrencyMatchInput,
     CustomAccountInput,
     CustomTxInput,
+    LedgerAccountDataMigrationsFilterSet,
     LedgerEntriesFilterSet,
+    LedgerEntryDataMigrationsFilterSet,
     LedgerEntryGroupBalanceFilterSet,
     LedgerEntryGroupInput,
     LedgerEntryInput,
@@ -1439,6 +1449,309 @@ class Client(SyncFragmentClient):
         )
         data = self.get_data(response)
         return ListLedgerEntryGroupBalances.model_validate(data)
+
+    def get_entry_data_migrations(
+        self,
+        ledger_ik: Any,
+        filter: Optional[LedgerEntryDataMigrationsFilterSet] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        **kwargs: Any
+    ) -> GetEntryDataMigrations:
+        query = gql(
+            """
+            query getEntryDataMigrations($ledgerIk: SafeString!, $filter: LedgerEntryDataMigrationsFilterSet, $after: String, $before: String, $first: Int, $last: Int) {
+              ledger(ledger: {ik: $ledgerIk}) {
+                ledgerEntryDataMigrations(
+                  first: $first
+                  after: $after
+                  before: $before
+                  last: $last
+                  filter: $filter
+                ) {
+                  nodes {
+                    entryType
+                    typeVersion
+                    status
+                    currentMigration {
+                      schemaVersion
+                      status
+                    }
+                    ledgerEntries {
+                      nodes {
+                        id
+                        type
+                        posted
+                        parameters
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                    history {
+                      nodes {
+                        schemaVersion
+                        status
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                    hasPreviousPage
+                    startCursor
+                  }
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "filter": filter,
+            "after": after,
+            "before": before,
+            "first": first,
+            "last": last,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="getEntryDataMigrations",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetEntryDataMigrations.model_validate(data)
+
+    def get_entries_to_migrate_for_ledger_entry_data_migration(
+        self,
+        ledger_ik: Any,
+        entry_type: str,
+        type_version: str,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        **kwargs: Any
+    ) -> GetEntriesToMigrateForLedgerEntryDataMigration:
+        query = gql(
+            """
+            query getEntriesToMigrateForLedgerEntryDataMigration($ledgerIk: SafeString!, $entryType: String!, $typeVersion: String!, $after: String, $before: String, $first: Int, $last: Int) {
+              ledger(ledger: {ik: $ledgerIk}) {
+                ledgerEntryDataMigrations(
+                  filter: {entryType: {equalTo: $entryType}, typeVersion: {equalTo: $typeVersion}}
+                ) {
+                  nodes {
+                    ledgerEntries(first: $first, after: $after, last: $last, before: $before) {
+                      nodes {
+                        id
+                        ik
+                        type
+                        typeVersion
+                        description
+                        posted
+                        created
+                        parameters
+                        lines {
+                          nodes {
+                            id
+                            amount
+                            account {
+                              path
+                            }
+                          }
+                        }
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "entryType": entry_type,
+            "typeVersion": type_version,
+            "after": after,
+            "before": before,
+            "first": first,
+            "last": last,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="getEntriesToMigrateForLedgerEntryDataMigration",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetEntriesToMigrateForLedgerEntryDataMigration.model_validate(data)
+
+    def get_account_data_migrations(
+        self,
+        ledger_ik: Any,
+        filter: Optional[LedgerAccountDataMigrationsFilterSet] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        **kwargs: Any
+    ) -> GetAccountDataMigrations:
+        query = gql(
+            """
+            query getAccountDataMigrations($ledgerIk: SafeString!, $filter: LedgerAccountDataMigrationsFilterSet, $after: String, $before: String, $first: Int, $last: Int) {
+              ledger(ledger: {ik: $ledgerIk}) {
+                ledgerAccountDataMigrations(
+                  first: $first
+                  after: $after
+                  before: $before
+                  last: $last
+                  filter: $filter
+                ) {
+                  nodes {
+                    accountPath
+                    status
+                    currentMigration {
+                      schemaVersion
+                      status
+                    }
+                    ledgerEntries {
+                      nodes {
+                        id
+                        type
+                        posted
+                        parameters
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                    history {
+                      nodes {
+                        schemaVersion
+                        status
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                    hasPreviousPage
+                    startCursor
+                  }
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "filter": filter,
+            "after": after,
+            "before": before,
+            "first": first,
+            "last": last,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="getAccountDataMigrations",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetAccountDataMigrations.model_validate(data)
+
+    def get_entries_to_migrate_for_ledger_account_data_migration(
+        self,
+        ledger_ik: Any,
+        account_path: str,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        first: Optional[int] = None,
+        last: Optional[int] = None,
+        **kwargs: Any
+    ) -> GetEntriesToMigrateForLedgerAccountDataMigration:
+        query = gql(
+            """
+            query getEntriesToMigrateForLedgerAccountDataMigration($ledgerIk: SafeString!, $accountPath: String!, $after: String, $before: String, $first: Int, $last: Int) {
+              ledger(ledger: {ik: $ledgerIk}) {
+                ledgerAccountDataMigrations(filter: {accountPath: {equalTo: $accountPath}}) {
+                  nodes {
+                    ledgerEntries(first: $first, after: $after, last: $last, before: $before) {
+                      nodes {
+                        id
+                        ik
+                        type
+                        typeVersion
+                        description
+                        posted
+                        created
+                        parameters
+                        lines {
+                          nodes {
+                            id
+                            amount
+                            account {
+                              path
+                            }
+                          }
+                        }
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                        hasPreviousPage
+                        startCursor
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+        )
+        variables: Dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "accountPath": account_path,
+            "after": after,
+            "before": before,
+            "first": first,
+            "last": last,
+        }
+        response = self.execute(
+            query=query,
+            operation_name="getEntriesToMigrateForLedgerAccountDataMigration",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetEntriesToMigrateForLedgerAccountDataMigration.model_validate(data)
 
     def create_custom_currency(
         self, id: Any, name: str, precision: int, custom_code: str, **kwargs: Any
