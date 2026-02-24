@@ -14,7 +14,7 @@ packages = [{include = "fragment"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ariadne-codegen = "^0.13.0"
+ariadne-codegen = "^0.17.2"
 requests-oauth2client = "^1.6.0"
 pydantic = "^2.8.0"
 httpx = "^0.28.1"
