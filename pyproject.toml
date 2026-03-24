@@ -18,13 +18,13 @@ ariadne-codegen = "^0.17.2"
 requests-oauth2client = "^1.6.0"
 pydantic = "^2.8.0"
 httpx = "^0.28.1"
-authlib = "^1.6.6"
+authlib = "^1.6.9"
 graphql-core = "^3.2.3"
 click = "^8.1.7"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.2.6"
-black = "^24.8.0"
+black = "^26.3.1"
 isort = "^5.13.2"
 mypy = "^1.11.2"
 
