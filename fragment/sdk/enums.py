@@ -40,6 +40,8 @@ class CurrencyCode(str, Enum):
     BYR = "BYR"
     BZD = "BZD"
     CAD = "CAD"
+    CADC = "CADC"
+    CADT = "CADT"
     CDF = "CDF"
     CHF = "CHF"
     CLP = "CLP"
@@ -61,6 +63,7 @@ class CurrencyCode(str, Enum):
     ETB = "ETB"
     ETH = "ETH"
     EUR = "EUR"
+    EURC = "EURC"
     FJD = "FJD"
     FKP = "FKP"
     GBP = "GBP"
@@ -170,6 +173,7 @@ class CurrencyCode(str, Enum):
     UNI = "UNI"
     USD = "USD"
     USDC = "USDC"
+    USDG = "USDG"
     USDT = "USDT"
     UYU = "UYU"
     UZS = "UZS"
@@ -215,6 +219,11 @@ class IncreaseEnv(str, Enum):
     sandbox = "sandbox"
 
 
+class LedgerAccountClearingStatus(str, Enum):
+    cleared = "cleared"
+    pending = "pending"
+
+
 class LedgerAccountTypes(str, Enum):
     asset = "asset"
     expense = "expense"
@@ -249,6 +258,12 @@ class LinkType(str, Enum):
     IncreaseLink = "IncreaseLink"
     StripeLink = "StripeLink"
     UnitLink = "UnitLink"
+
+
+class PostLinesAs(str, Enum):
+    net_amounts = "net_amounts"
+    raw_lines = "raw_lines"
+    skip_zero_lines = "skip_zero_lines"
 
 
 class ReadBalanceConsistencyMode(str, Enum):
