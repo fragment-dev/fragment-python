@@ -17,7 +17,7 @@ class GetLedgerAccountBalance(BaseModel):
 class GetLedgerAccountBalanceLedgerAccount(BaseModel):
     id: str
     path: str
-    own_balance: Any = Field(alias="ownBalance")
+    balance: Any
 
 
 GetLedgerAccountBalance.model_rebuild()
