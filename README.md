@@ -2,6 +2,8 @@
 
 [Fragment](https://fragment.dev/) is the Ledger API for engineers that move money. Stop wrangling payment tables, debugging balance errors, and hacking together data pipelines. Start shipping the features that make a difference.
 
+See [CHANGELOG.md](CHANGELOG.md) for release notes and upgrade guidance.
+
 ## Installation
 
 Using `pip`:
