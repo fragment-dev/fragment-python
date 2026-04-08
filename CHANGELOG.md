@@ -25,7 +25,7 @@ are not documented here.
    - A schema can use only one of `ownBalanceUpdates` or `totalBalanceUpdates` for consistency and conditions.
    - Deploy the new schema.
 2. You can now set `consistencyConfig.totalBalanceUpdates: strong` on any account in the tree to make its balance strongly consistent.
-3. Upgrade the Fragment SDK to this version.
+3. Upgrade the Fragment SDK to version 1.0.0.
    - `GetLedgerAccountBalance` now returns total `balance` (self + children) instead of `ownBalance`. 
     - Change `$ownBalanceConsistencyMode` to `$balanceConsistencyMode`
   - Use `GetLedgerAccountBalance` instead of `GetLedgerAccountBalanceWithChildRollup`.
