@@ -12,28 +12,20 @@ are not documented here.
 
 ### Changed
 
-- `GetLedgerAccountBalance` now returns total `balance` (self + children)
-  instead of `ownBalance`.
-- `ListLedgerAccountBalances` and `ListMultiCurrencyLedgerAccountBalances`
-  now accept `consistencyMode` on `childBalance`, `childBalances`,
-  `balance`, and `balances` fields.
+- `GetLedgerAccountBalance` now returns total `balance` (self + children) instead of `ownBalance`.
+- `ListLedgerAccountBalances` and `ListMultiCurrencyLedgerAccountBalances` now accept `consistencyMode` on `childBalance`, `childBalances`, `balance`, and `balances`.
 
 ### Removed
-
 - `GetLedgerAccountBalanceWithChildRollup` has been removed.
 
-### How to Upgrade
-
+### Upgrade Guide
 1. Upgrade your schema to use total balance consistency.
-2. Edit your schema JSON. Change `ownBalanceUpdates` to
-   `totalBalanceUpdates` in the ledger account consistency config.
-3. Change `ownBalance` to `totalBalance` in entry conditions.
-4. Ensure the schema has only one of `ownBalanceUpdates` or
-   `totalBalanceUpdates`.
-5. Deploy the new schema.
-6. You can now set `consistencyConfig.totalBalanceUpdates: strong` on any
-   account in the tree, and its balance will be strongly consistent.
-7. Upgrade `fragment-python` to the latest version.
-8. Change `$ownBalanceConsistencyMode` to `$balanceConsistencyMode`.
-9. Use `GetLedgerAccountBalance` instead of
-   `GetLedgerAccountBalanceWithChildRollup`.
+   - Change `ownBalanceUpdates` to `totalBalanceUpdates` in ledger account consistency config.
+   - Change `ownBalance` to `totalBalance` in entry conditions.
+   - A schema can use only one of `ownBalanceUpdates` or `totalBalanceUpdates` for consistency and conditions.
+   - Deploy the new schema.
+2. You can now set `consistencyConfig.totalBalanceUpdates: strong` on any account in the tree to make its balance strongly consistent.
+3. Upgrade the Fragment SDK to this version.
+   - `GetLedgerAccountBalance` now returns total `balance` (self + children) instead of `ownBalance`. 
+    - Change `$ownBalanceConsistencyMode` to `$balanceConsistencyMode`
+  - Use `GetLedgerAccountBalance` instead of `GetLedgerAccountBalanceWithChildRollup`.
