@@ -18,7 +18,7 @@ ariadne-codegen = "^0.17.2"
 requests-oauth2client = "^1.6.0"
 pydantic = "^2.8.0"
 httpx = "^0.28.1"
-authlib = "^1.6.9"
+authlib = "^1.6.12"
 graphql-core = "^3.2.3"
 click = "^8.1.7"
 
