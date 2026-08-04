@@ -1,0 +1,13 @@
+# Collapse machine-produced files in pull request diffs and exclude them from
+# the repository's language statistics.
+#
+# Deliberately NOT marked `-diff`: `make check-snapshots` fails when generated
+# output drifts, and reviewing that diff is the point. These files stay
+# diffable, just collapsed by default.
+
+# Vendored: synced verbatim from fragment-dev/graphql-queries by the
+# updateSDKQueries workflow. Never edited here.
+tests/template-schema/** linguist-vendored=true
+
+# Generated: produced by `make snapshots` from the sibling queries.graphql.
+tests/snapshots/*/sdk/** linguist-generated=true

@@ -35,3 +35,28 @@ jobs:
 
       - name: Run tests
         run: poetry run pytest -v
+
+  # Regenerates the clients in tests/snapshots/ and fails if the output differs
+  # from what is committed. Needs no credentials -- codegen only downloads the
+  # public GraphQL schema -- so it is a separate job and still runs on forks.
+  snapshots:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        name: Checkout fragment-python
+
+      - name: Use Python 3.10.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.10.14'
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install --with dev
+
+      - name: Check generated clients match snapshots
+        run: make check-snapshots
