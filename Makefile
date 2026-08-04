@@ -1,4 +1,4 @@
-.PHONY: lint
+.PHONY: lint test
 
 install:
 	poetry install --with dev
@@ -6,13 +6,18 @@ install:
 lint: sort_order style typecheck
 
 sort_order:
-	poetry run isort fragment/
+	poetry run isort fragment/ tests/
 
 style:
-	poetry run black fragment/
+	poetry run black fragment/ tests/
 
 typecheck:
 	poetry run mypy -p fragment
+
+# Integration tests. Requires CLIENT_ID, CLIENT_SECRET, SCOPE, AUTH_URL and
+# API_URL in the environment; the tests fail if any are missing.
+test:
+	poetry run pytest
 
 build: install
 	poetry run fragment-python-client-codegen --input-dir=queries/ --target-package-name=sdk --output-dir fragment/

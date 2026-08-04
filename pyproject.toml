@@ -27,6 +27,8 @@ pylint = "^3.2.6"
 black = "^26.3.1"
 isort = "^5.13.2"
 mypy = "^1.11.2"
+pytest = "^8.3.2"
+pytest-asyncio = "^0.24.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -34,6 +36,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 fragment-python-client-codegen = 'fragment.codegen.main:run'
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.pylint.messages_control]
 max-line-length = 88
