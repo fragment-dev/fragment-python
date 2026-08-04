@@ -161,6 +161,7 @@ from .get_ledger_entry import (
 from .get_schema import GetSchema, GetSchemaSchema, GetSchemaSchemaVersion
 from .get_workspace import GetWorkspace, GetWorkspaceWorkspace
 from .input_types import (
+    AddLedgerEntryInput,
     ChartOfAccountsInput,
     CreateCustomCurrencyInput,
     CreateLedgerAccountInput,
@@ -230,6 +231,7 @@ from .input_types import (
     SchemaLedgerEntryTagInput,
     SchemaLedgerLineInput,
     SchemaMatchInput,
+    SchemaPaymentInput,
     SchemaRepeatedConfigInput,
     SchemaTxMatchInput,
     StringFilter,
@@ -393,6 +395,7 @@ __all__ = [
     "AddLedgerEntryAddLedgerEntryAddLedgerEntryResultLinesAccount",
     "AddLedgerEntryAddLedgerEntryBadRequestError",
     "AddLedgerEntryAddLedgerEntryInternalError",
+    "AddLedgerEntryInput",
     "AddLedgerEntryRuntime",
     "AddLedgerEntryRuntimeAddLedgerEntryAddLedgerEntryResult",
     "AddLedgerEntryRuntimeAddLedgerEntryAddLedgerEntryResultEntry",
@@ -665,6 +668,7 @@ __all__ = [
     "SchemaLedgerEntryTagInput",
     "SchemaLedgerLineInput",
     "SchemaMatchInput",
+    "SchemaPaymentInput",
     "SchemaRepeatedConfigInput",
     "SchemaTxMatchInput",
     "StoreSchema",
