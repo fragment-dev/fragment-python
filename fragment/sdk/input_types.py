@@ -25,6 +25,13 @@ from .enums import (
 )
 
 
+class AddLedgerEntryInput(BaseModel):
+    entry: "LedgerEntryInput"
+    "The [Ledger Entry](https://fragment.dev/api-reference/api-types#input-types-ledgerentryinput) to commit"
+    ik: Any
+    "The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this entry"
+
+
 class ChartOfAccountsInput(BaseModel):
     """The input for your Chart of Accounts in a Schema."""
 
@@ -33,7 +40,7 @@ class ChartOfAccountsInput(BaseModel):
     default_consistency_config: Optional["LedgerAccountConsistencyConfigInput"] = Field(
         alias="defaultConsistencyConfig", default=None
     )
-    "The default consistency configuration for all Ledger Accounts in this Schema. \nIf a Ledger Account does not specify its own consistency configuration, it will use the default values provided here. \n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "The default consistency configuration for all Ledger Accounts in this Schema. \nIf a Ledger Account does not specify its own consistency configuration, it will use the default values provided here. \n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     default_currency: Optional["CurrencyMatchInput"] = Field(
         alias="defaultCurrency", default=None
     )
@@ -84,7 +91,7 @@ class CreateLedgerAccountsInput(BaseModel):
     consistency_config: Optional["LedgerAccountConsistencyConfigInput"] = Field(
         alias="consistencyConfig", default=None
     )
-    "The consistency configuration for this ledger account. See [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "The consistency configuration for this ledger account. See [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     currency: Optional["CurrencyMatchInput"] = None
     "The currency of this Ledger Account. If this is not set, the workspace level default is used."
     currency_mode: Optional[CurrencyMode] = Field(alias="currencyMode", default=None)
@@ -94,7 +101,7 @@ class CreateLedgerAccountsInput(BaseModel):
     linked_account: Optional["ExternalAccountMatchInput"] = Field(
         alias="linkedAccount", default=None
     )
-    "The External Account to link to this Ledger Account. This can only be specified on leaf Ledger Accounts. See [Reconcile payments](https://fragment.dev/docs/reconcile-payments)."
+    "The External Account to link to this Ledger Account. This can only be specified on leaf Ledger Accounts. See [Reconcile payments](https://fragment.dev/guides/reconcile-payments)."
     name: str
     "The name of the Ledger Account."
     parent: Optional["LedgerAccountMatchInput"] = None
@@ -150,6 +157,12 @@ class DateFilter(BaseModel):
     equal_to: Optional[Any] = Field(alias="equalTo", default=None)
     in_: Optional[list[Any]] = Field(alias="in", default=None)
     "Must match one of the values provided. Limited to 100 items maximum."
+    within: Optional[Any] = None
+    'Must fall within the given period. Supports a year (e.g. "2026") or a month (e.g. "2026-05"). To match a specific day, use `equalTo`. Cannot be combined with `withinBalanceUTCOffset`.'
+    within_balance_utc_offset: Optional[Any] = Field(
+        alias="withinBalanceUTCOffset", default=None
+    )
+    'Must fall within the given period, taking into account the Ledger\'s `balanceUTCOffset`. Supports a year (e.g. "2026") or a month (e.g. "2026-05"). Cannot be combined with `within`.'
 
 
 class DateTimeFilter(BaseModel):
@@ -300,20 +313,20 @@ class LedgerAccountConditionInput(BaseModel):
 
 class LedgerAccountConsistencyConfigInput(BaseModel):
     """The payload configuring the consistency for this Ledger Account.
-    See [Configure consistency](https://fragment.dev/docs/configure-consistency)."""
+    See [Configure consistency](https://fragment.dev/guides/configure-consistency)."""
 
     groups: Optional[list["LedgerAccountGroupConsistencyConfigInput"]] = None
-    "The consistency configuration for Ledger Entry Groups affecting this account.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "The consistency configuration for Ledger Entry Groups affecting this account.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     lines: Optional[LedgerLinesConsistencyMode] = None
-    "If set to `strong`, then a Ledger Account's `lines` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `lines` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "If set to `strong`, then a Ledger Account's `lines` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `lines` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     own_balance_updates: Optional[BalanceUpdateConsistencyMode] = Field(
         alias="ownBalanceUpdates", default=None
     )
-    "If set to `strong`, then a Ledger Account's `ownBalance` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "If set to `strong`, then a Ledger Account's `ownBalance` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     total_balance_updates: Optional[BalanceUpdateConsistencyMode] = Field(
         alias="totalBalanceUpdates", default=None
     )
-    "EXPERIMENTAL: If set to `strong`, then a Ledger Account's `totalBalance` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `totalBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "EXPERIMENTAL: If set to `strong`, then a Ledger Account's `totalBalance` updates will be strongly consistent with the API response.\nThis Ledger Account's balance will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, `totalBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
 
 
 class LedgerAccountDataMigrationsFilterSet(BaseModel):
@@ -336,7 +349,7 @@ class LedgerAccountGroupConsistencyConfigInput(BaseModel):
     key: Any
     "The group key for this configuration."
     own_balance_updates: BalanceUpdateConsistencyMode = Field(alias="ownBalanceUpdates")
-    "If set to `strong`, then Ledger Entry Group `ownBalance`s updates for this account will be strongly consistent with the API response.\nThis Ledger Account's Ledger Entry Group balances will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, Ledger Entry Group `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "If set to `strong`, then Ledger Entry Group `ownBalance`s updates for this account will be strongly consistent with the API response.\nThis Ledger Account's Ledger Entry Group balances will be updated and available for strongly consistent reads before you receive an API response.\n\nOtherwise if unset or set to `eventual`, Ledger Entry Group `ownBalance` updates are applied asynchronously and may not be immediately reflected in queries.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
 
 
 class LedgerAccountMatchInput(BaseModel):
@@ -398,6 +411,7 @@ class LedgerAccountsFilterSet(BaseModel):
 
 class LedgerEntriesFilterSet(BaseModel):
     date: Optional["DateFilter"] = None
+    "Use this filter to filter Ledger Entries by their `posted` date."
     group: Optional["GroupFilter"] = None
     "Use this to filter Ledger Entries by groups. The response will include entries that contain or do not contain specific groups."
     is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
@@ -409,6 +423,7 @@ class LedgerEntriesFilterSet(BaseModel):
     )
     "Use to filter Ledger Entries by their IDs or IKs."
     posted: Optional["DateTimeFilter"] = None
+    "Use this filter to filter Ledger Entries by their `posted` timestamp."
     show_hidden: Optional[bool] = Field(alias="showHidden", default=None)
     "Use this filter to show hidden Ledger Entries."
     tag: Optional["TagFilter"] = None
@@ -567,7 +582,7 @@ class LedgerLinesFilterSet(BaseModel):
     currency: Optional["CurrencyFilter"] = None
     "Filter by the currency of the Ledger Line."
     date: Optional["DateFilter"] = None
-    "Filter by the posted date of the Ledger Line. This is identical to using `posted`, but only supports day-level granularity."
+    "Use this filter to filter Ledger Lines by their `posted` date."
     is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
     "Use this to filter Ledger Lines that were posted to this Ledger Account, using `reverseLedgerEntry`."
     is_reversed: Optional[bool] = Field(alias="isReversed", default=None)
@@ -579,9 +594,9 @@ class LedgerLinesFilterSet(BaseModel):
     )
     "Specify which Ledger Account to read lines from. Required when querying lines via `Ledger.lines` without a `path` filter. Not allowed when querying via `LedgerAccount.lines`."
     path: Optional["StringMatchFilter"] = None
-    "A filter that string matches the account path. Wildcards ('*') can be used to return lines across multiple accounts.\nTo search for all instances of a a Ledger Account template, use the `matches` filter  with an wildcard character in place of the template value e.g. `assets/user:*`. This returns lines from all instances of this template, interleaved by `posted` timestamp.\nTo search for all descendant Ledger Accounts under a given path, use a trailing `/*` in the `matches` filter e.g. `assets/user:user-1>/*`. This returns lines from all descendants at any depth, but not lines from the parent account at `assets/user:user-1>`.\nCannot be combined with `ledgerAccount` filter. Not allowed when querying via `LedgerAccount.lines`. You cannot use wildcards for both descendant and template instance matching in the same query."
+    'A filter that string matches the account path. Wildcards (\'*\') can be used to return lines across multiple accounts.\nTo search for all instances of a a Ledger Account template, use the `matches` filter  with an wildcard character in place of the template value e.g. `assets/user:*`. This returns lines from all instances of this template, interleaved by `posted` timestamp.\nTo search for all descendant Ledger Accounts under a given path, use a trailing `/*` in the `matches` filter e.g. `assets/user:user-1>/*`. This returns lines from all descendants at any depth, but not lines from the parent account at `assets/user:user-1>`.\nTo OR multiple `matches` patterns and get a single paginated list, use `matchesAny` — e.g. `matchesAny: ["assets/user:user-1/*", "assets/user:user-2/*"]` returns descendants of both prefixes interleaved by `posted` timestamp.\nCannot be combined with `ledgerAccount` filter. Not allowed when querying via `LedgerAccount.lines`. You cannot use wildcards for both descendant and template instance matching in the same query.'
     posted: Optional["DateTimeFilter"] = None
-    "Filter by the posted timestamp of the Ledger Line."
+    "Use this filter to filter Ledger Lines by their `posted` timestamp."
     show_hidden: Optional[bool] = Field(alias="showHidden", default=None)
     "Use this filter to find hidden Ledger Lines."
     tag: Optional["TagFilter"] = None
@@ -664,10 +679,10 @@ class SchemaConditionInput(BaseModel):
 class SchemaConsistencyConfigInput(BaseModel):
     """The consistency configuration for entities created within Ledgers created by this Schema.
 
-    See [Configure consistency](https://fragment.dev/docs/configure-consistency)."""
+    See [Configure consistency](https://fragment.dev/guides/configure-consistency)."""
 
     entries: Optional[SchemaConsistencyMode] = None
-    "The consistency mode for the Ledger Entries list query within Ledgers created by this Schema.\n\nSee [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "The consistency mode for the Ledger Entries list query within Ledgers created by this Schema.\n\nSee [Configure consistency](https://fragment.dev/guides/configure-consistency)."
 
 
 class SchemaCurrencyMatchInput(BaseModel):
@@ -739,7 +754,7 @@ class SchemaLedgerAccountInput(BaseModel):
     consistency_config: Optional["LedgerAccountConsistencyConfigInput"] = Field(
         alias="consistencyConfig", default=None
     )
-    "The consistency configuration for this ledger account. See [Configure consistency](https://fragment.dev/docs/configure-consistency)."
+    "The consistency configuration for this ledger account. See [Configure consistency](https://fragment.dev/guides/configure-consistency)."
     currency: Optional["SchemaCurrencyMatchInput"] = None
     "The currency of this Ledger Account. If this is not set, and `currencyMode` is\nnot set to `multi`, it is derived from the Chart of Accounts' default."
     currency_mode: Optional[CurrencyMode] = Field(alias="currencyMode", default=None)
@@ -752,6 +767,8 @@ class SchemaLedgerAccountInput(BaseModel):
     "The External Account to link to this Ledger Account.\nIt must be provided of `linked` is true."
     name: Optional[Any] = None
     "The human-readable name of this Ledger Account."
+    payment: Optional["SchemaPaymentInput"] = None
+    "EXPERIMENTAL: Marks this as a Payment Account."
     status: Optional[SchemaLedgerAccountStatus] = None
     "The status of this Ledger Account. Defaults to active."
     template: Optional[bool] = None
@@ -850,7 +867,7 @@ class SchemaLedgerLineInput(BaseModel):
     tags: Optional[list["SchemaLedgerEntryTagInput"]] = None
     "Tags to attach to this Ledger Line. Supports parameterized values via handlebars syntax."
     tx: Optional["SchemaTxMatchInput"] = None
-    "The external transaction to reconcile.\nThis field is required if the Ledger Account being posted to is a Linked Ledger Account. Otherwise, this field is disallowed.\nIt supports parameters in its attributes via handlebars syntax.\n\nSee the docs on [reconciling payments](https://fragment.dev/docs/reconcile-payments)."
+    "The external transaction to reconcile.\nThis field is required if the Ledger Account being posted to is a Linked Ledger Account. Otherwise, this field is disallowed.\nIt supports parameters in its attributes via handlebars syntax.\n\nSee the docs on [reconciling payments](https://fragment.dev/guides/reconcile-payments)."
 
 
 class SchemaMatchInput(BaseModel):
@@ -860,6 +877,12 @@ class SchemaMatchInput(BaseModel):
     "The key to retrieve a Schema by.\n`key` is unique to a Workspace."
     version: Optional[int] = None
     "Optional parameter to specify version of requested Schema. If not provided, it defaults to 0, representing the latest available version for the provided Schema key."
+
+
+class SchemaPaymentInput(BaseModel):
+    """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
+
+    penguin: bool
 
 
 class SchemaRepeatedConfigInput(BaseModel):
@@ -901,6 +924,8 @@ class StringMatchFilter(BaseModel):
     "Must exactly equal one of the provided values. Limited to 100 items maximum."
     matches: Optional[str] = None
     'Must match the provided pattern. Wildcards ("*") will match any substring'
+    matches_any: Optional[list[str]] = Field(alias="matchesAny", default=None)
+    "Must match any one of the provided `matches` patterns, OR-ed together — results are returned as a single paginated list. Each entry uses the same wildcard grammar as `matches`. Cannot be combined with `matches`. Limited to 100 entries."
 
 
 class TagFilter(BaseModel):
@@ -983,6 +1008,7 @@ class UpdateLedgerInput(BaseModel):
     "The new Ledger name. "
 
 
+AddLedgerEntryInput.model_rebuild()
 ChartOfAccountsInput.model_rebuild()
 CreateLedgerAccountInput.model_rebuild()
 CreateLedgerAccountsInput.model_rebuild()
