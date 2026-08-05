@@ -19,6 +19,17 @@ class AddLedgerEntries(BaseModel):
 
 class AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError(BaseModel):
     typename__: Literal["AddLedgerEntriesError"] = Field(alias="__typename")
+    code: str
+    message: str
+    retryable: bool
+    errors: list["AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesErrorErrors"]
+
+
+class AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesErrorErrors(BaseModel):
+    ik: Any
+    code: str
+    message: str
+    retryable: bool
 
 
 class AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult(BaseModel):
@@ -67,6 +78,7 @@ class AddLedgerEntriesAddLedgerEntriesInternalError(BaseModel):
 
 
 AddLedgerEntries.model_rebuild()
+AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError.model_rebuild()
 AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult.model_rebuild()
 AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResults.model_rebuild()
 AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResultsLines.model_rebuild()

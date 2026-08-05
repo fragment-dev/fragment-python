@@ -3,6 +3,7 @@
 from .add_ledger_entries import (
     AddLedgerEntries,
     AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError,
+    AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesErrorErrors,
     AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult,
     AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResults,
     AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResultsEntry,
@@ -518,6 +519,7 @@ from .update_ledger_entry import (
 __all__ = [
     "AddLedgerEntries",
     "AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError",
+    "AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesErrorErrors",
     "AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult",
     "AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResults",
     "AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResultResultsEntry",

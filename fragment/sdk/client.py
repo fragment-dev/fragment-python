@@ -211,6 +211,68 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return DeleteLedger.model_validate(data)
 
+    async def add_ledger_entries(
+        self,
+        entries: Sequence[Union[AddLedgerEntryInput, TypedLedgerEntry]],
+        **kwargs: Any
+    ) -> AddLedgerEntries:
+        query = gql("""
+            mutation addLedgerEntries($entries: [AddLedgerEntryInput!]!) {
+              addLedgerEntries(entries: $entries) {
+                __typename
+                ... on AddLedgerEntriesResult {
+                  results {
+                    isIkReplay
+                    entry {
+                      type
+                      id
+                      ik
+                      posted
+                      created
+                    }
+                    lines {
+                      id
+                      amount
+                      account {
+                        path
+                      }
+                    }
+                  }
+                }
+                ... on AddLedgerEntriesError {
+                  code
+                  message
+                  retryable
+                  errors {
+                    ik
+                    code
+                    message
+                    retryable
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"entries": entries}
+        response = await self.execute(
+            query=query,
+            operation_name="addLedgerEntries",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return AddLedgerEntries.model_validate(data)
+
     async def add_ledger_entry(
         self,
         ik: Any,
@@ -275,57 +337,6 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return AddLedgerEntry.model_validate(data)
-
-    async def add_ledger_entries(
-        self,
-        entries: Sequence[Union[AddLedgerEntryInput, TypedLedgerEntry]],
-        **kwargs: Any
-    ) -> AddLedgerEntries:
-        query = gql("""
-            mutation addLedgerEntries($entries: [AddLedgerEntryInput!]!) {
-              addLedgerEntries(entries: $entries) {
-                __typename
-                ... on AddLedgerEntriesResult {
-                  results {
-                    isIkReplay
-                    entry {
-                      type
-                      id
-                      ik
-                      posted
-                      created
-                    }
-                    lines {
-                      id
-                      amount
-                      account {
-                        path
-                      }
-                    }
-                  }
-                }
-                ... on BadRequestError {
-                  code
-                  message
-                  retryable
-                }
-                ... on InternalError {
-                  code
-                  message
-                  retryable
-                }
-              }
-            }
-            """)
-        variables: dict[str, object] = {"entries": entries}
-        response = await self.execute(
-            query=query,
-            operation_name="addLedgerEntries",
-            variables=variables,
-            **kwargs
-        )
-        data = self.get_data(response)
-        return AddLedgerEntries.model_validate(data)
 
     async def reverse_ledger_entry(self, id: str, **kwargs: Any) -> ReverseLedgerEntry:
         query = gql("""
