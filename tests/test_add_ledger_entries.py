@@ -20,8 +20,8 @@ import pytest_asyncio
 # `sdk` is the snapshotted client, on sys.path via the `pythonpath` setting in
 # pyproject.toml. Regenerate it with `make snapshots`.
 from sdk.add_ledger_entries import (
+    AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError,
     AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult,
-    AddLedgerEntriesAddLedgerEntriesBadRequestError,
 )
 from sdk.client import Client
 from sdk.enums import CurrencyCode
@@ -167,6 +167,6 @@ async def test_add_ledger_entries_rejects_unknown_entry_type(
     )
 
     error = response.add_ledger_entries
-    assert isinstance(error, AddLedgerEntriesAddLedgerEntriesBadRequestError)
+    assert isinstance(error, AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesError)
     assert error.code
     assert error.message
