@@ -8,17 +8,31 @@ time it runs. `resolve_class_names` previously mutated its input, which made
 `OrderPlaced` become `OrderPlacedV1` and then `OrderPlacedV1V1`.
 """
 
-from typing import List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Sequence
 
 import pytest
 from ariadne_codegen.utils import str_to_pascal_case, str_to_snake_case
+from graphql import OperationDefinitionNode, parse
+from pydantic import model_serializer
 
 from fragment.codegen.typed_entries import (
+    BASE_CLASS_SOURCE,
     DEFAULT_TYPE_VERSION,
     EntryParameter,
     EntrySpec,
+    _safe_field_name,
+    extract_entry_spec,
     render_module,
     resolve_class_names,
+)
+from fragment.sdk.base_model import BaseModel
+from fragment.sdk.input_types import (
+    AddLedgerEntryInput,
+    LedgerEntryConditionInput,
+    LedgerEntryGroupInput,
+    LedgerEntryInput,
+    LedgerEntryTagInput,
+    LedgerMatchInput,
 )
 
 
@@ -137,3 +151,174 @@ def test_render_module_is_idempotent() -> None:
     assert "class OrderPlacedV1(TypedLedgerEntry):" in first
     assert "class OrderPlacedV2(TypedLedgerEntry):" in first
     assert "V1V1" not in first
+
+
+# --- Parameter naming: what reaches Python vs what reaches the wire -----------
+
+
+@pytest.mark.parametrize(
+    ("schema_name", "field_name"),
+    [
+        ("order_cost", "order_cost"),  # already safe, left alone
+        ("type", "type_"),  # shadows a builtin
+        ("class", "class_"),  # Python keyword
+        ("def", "def_"),
+        ("json", "json_"),  # pydantic reserved
+        ("copy", "copy_"),
+        ("model_dump", "model_dump_"),
+        ("ik", "ik_"),  # collides with TypedLedgerEntry's own field
+        ("posted", "posted_"),
+        ("description", "description_"),
+        ("userId", "user_id"),  # camelCase is snake_cased
+        ("captureAmount", "capture_amount"),
+    ],
+)
+def test_schema_parameter_becomes_a_safe_field_name(
+    schema_name: str, field_name: str
+) -> None:
+    assert _safe_field_name(schema_name) == field_name
+
+
+def operation(parameters: str, variables: str) -> OperationDefinitionNode:
+    doc = parse(
+        f"""mutation PostThing($ik: SafeString!, $ledgerIk: SafeString!, {variables}) {{
+          addLedgerEntry(
+            ik: $ik
+            entry: {{ledger: {{ik: $ledgerIk}}, type: "thing", parameters: {{{parameters}}}}}
+          ) {{ __typename }}
+        }}"""
+    )
+    node = doc.definitions[0]
+    assert isinstance(node, OperationDefinitionNode)
+    return node
+
+
+def test_parameter_fields_keeps_the_schema_name_when_the_field_is_escaped() -> None:
+    """The README's promise: escaping is local and never reaches the wire."""
+    spec_ = extract_entry_spec(
+        operation(
+            parameters="type: $entryType, json: $blob, userId: $userId",
+            variables="$entryType: String!, $blob: String!, $userId: String!",
+        ),
+        annotations={"entry_type": "str", "blob": "str", "user_id": "str"},
+    )
+    assert spec_ is not None
+    # (Schema name kept verbatim, Python field escaped or snake_cased.)
+    assert [(p.name, p.field_name) for p in spec_.parameters] == [
+        ("type", "type_"),
+        ("json", "json_"),
+        ("userId", "user_id"),
+    ]
+
+
+def test_rendered_parameter_fields_maps_wire_name_to_python_field() -> None:
+    spec_ = extract_entry_spec(
+        operation(
+            parameters="type: $entryType, userId: $userId",
+            variables="$entryType: String!, $userId: String!",
+        ),
+        annotations={"entry_type": "str", "user_id": "str"},
+    )
+    assert spec_ is not None
+    rendered = render_module([spec_])
+    assert '"type": "type_",' in rendered
+    assert '"userId": "user_id",' in rendered
+    assert "    type_: str" in rendered
+    assert "    user_id: str" in rendered
+
+
+# --- to_input() / serialisation ------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def sample() -> type:
+    """A model built on the base class *as rendered*, not as last generated.
+
+    `BASE_CLASS_SOURCE` is a source template, so importing the committed
+    `fragment.sdk.typed_entries` would test whenever codegen last ran instead of
+    what it emits now. Executing the template keeps these assertions pointed at
+    the thing under test.
+    """
+    namespace: dict = {
+        "Any": Any,
+        "ClassVar": ClassVar,
+        "Dict": Dict,
+        "List": List,
+        "Optional": Optional,
+        "Sequence": Sequence,
+        "BaseModel": BaseModel,
+        "model_serializer": model_serializer,
+        "AddLedgerEntryInput": AddLedgerEntryInput,
+        "LedgerEntryInput": LedgerEntryInput,
+        "LedgerMatchInput": LedgerMatchInput,
+        "LedgerEntryTagInput": LedgerEntryTagInput,
+        "LedgerEntryGroupInput": LedgerEntryGroupInput,
+        "LedgerEntryConditionInput": LedgerEntryConditionInput,
+    }
+    exec(BASE_CLASS_SOURCE, namespace)  # noqa: S102
+    return type(
+        "Sample",
+        (namespace["TypedLedgerEntry"],),
+        {
+            "__annotations__": {
+                "type_": str,
+                "user_id": str,
+                "optional_thing": Optional[str],
+            },
+            "optional_thing": None,
+            "ENTRY_TYPE": "thing",
+            "TYPE_VERSION": 2,
+            "PARAMETER_FIELDS": {
+                "type": "type_",
+                "userId": "user_id",
+                "optionalThing": "optional_thing",
+            },
+        },
+    )
+
+
+def test_to_input_builds_the_nested_add_ledger_entry_input(sample: type) -> None:
+    entry = sample(ik="ik-1", ledger_ik="prod", type_="t", user_id="u").to_input()
+    assert entry.ik == "ik-1"
+    assert entry.entry.ledger is not None
+    assert entry.entry.ledger.ik == "prod"
+    assert entry.entry.type_ == "thing"
+    assert entry.entry.type_version == 2
+    assert entry.entry.parameters == {"type": "t", "userId": "u"}
+    assert entry.entry.lines is None
+
+
+def test_serialisation_uses_schema_names_and_omits_what_was_not_set(
+    sample: type,
+) -> None:
+    dumped = sample(ik="ik-1", ledger_ik="prod", type_="t", user_id="u").model_dump(
+        by_alias=True
+    )
+    assert dumped == {
+        "ik": "ik-1",
+        "entry": {
+            "ledger": {"ik": "prod"},
+            "type": "thing",
+            "typeVersion": 2,
+            "parameters": {"type": "t", "userId": "u"},
+        },
+    }
+
+
+def test_optional_parameter_is_carried_when_set(sample: type) -> None:
+    dumped = sample(
+        ik="ik-1",
+        ledger_ik="prod",
+        type_="t",
+        user_id="u",
+        optional_thing="here",
+        description="a description",
+        posted="1968-01-01T16:45:00Z",
+    ).model_dump(by_alias=True)
+    assert dumped["entry"]["parameters"] == {
+        "type": "t",
+        "userId": "u",
+        "optionalThing": "here",
+    }
+    assert dumped["entry"]["description"] == "a description"
+    assert dumped["entry"]["posted"] == "1968-01-01T16:45:00Z"
