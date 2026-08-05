@@ -3,6 +3,7 @@
 
 from typing import Any, Optional
 
+from .add_ledger_entries import AddLedgerEntries
 from .add_ledger_entry import AddLedgerEntry
 from .add_ledger_entry_runtime import AddLedgerEntryRuntime
 from .async_client import AsyncFragmentClient
@@ -28,6 +29,7 @@ from .get_ledger_entry import GetLedgerEntry
 from .get_schema import GetSchema
 from .get_workspace import GetWorkspace
 from .input_types import (
+    AddLedgerEntryInput,
     CreateLedgerInput,
     CurrencyMatchInput,
     CustomAccountInput,
@@ -207,6 +209,66 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return DeleteLedger.model_validate(data)
+
+    async def add_ledger_entries(
+        self, entries: list[AddLedgerEntryInput], **kwargs: Any
+    ) -> AddLedgerEntries:
+        query = gql("""
+            mutation addLedgerEntries($entries: [AddLedgerEntryInput!]!) {
+              addLedgerEntries(entries: $entries) {
+                __typename
+                ... on AddLedgerEntriesResult {
+                  results {
+                    isIkReplay
+                    entry {
+                      type
+                      id
+                      ik
+                      posted
+                      created
+                    }
+                    lines {
+                      id
+                      amount
+                      account {
+                        path
+                      }
+                    }
+                  }
+                }
+                ... on AddLedgerEntriesError {
+                  code
+                  message
+                  retryable
+                  errors {
+                    ik
+                    code
+                    message
+                    retryable
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"entries": entries}
+        response = await self.execute(
+            query=query,
+            operation_name="addLedgerEntries",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return AddLedgerEntries.model_validate(data)
 
     async def add_ledger_entry(
         self,
