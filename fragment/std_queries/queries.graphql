@@ -147,6 +147,41 @@ mutation addLedgerEntry(
   }
 }
 
+mutation addLedgerEntries($entries: [AddLedgerEntryInput!]!) {
+  addLedgerEntries(entries: $entries) {
+    __typename
+    ... on AddLedgerEntriesResult {
+      results {
+        isIkReplay
+        entry {
+          type
+          id
+          ik
+          posted
+          created
+        }
+        lines {
+          id
+          amount
+          account {
+            path
+          }
+        }
+      }
+    }
+    ... on BadRequestError {
+      code
+      message
+      retryable
+    }
+    ... on InternalError {
+      code
+      message
+      retryable
+    }
+  }
+}
+
 mutation reverseLedgerEntry($id: ID!) {
   reverseLedgerEntry(id: $id) {
     __typename

@@ -42,6 +42,7 @@ def get_codegen_config(
                 plugins=[
                     "fragment.codegen.plugins.get_file_comment.GenerateFileComment",
                     "fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments",
+                    "fragment.codegen.plugins.generate_typed_entries.GenerateTypedLedgerEntries",
                 ],
             ),
         },
