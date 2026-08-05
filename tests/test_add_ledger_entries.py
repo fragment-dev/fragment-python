@@ -1,7 +1,7 @@
 """Integration tests for the `addLedgerEntries` batch mutation.
 
 Stores the vendored template Schema, creates a Ledger against it, and posts a
-batch of mixed entry types using the typed payloads generated in
+batch using the typed payloads generated in
 `tests/snapshots/001-marketing-schema`. Exercising the snapshotted client means
 these tests cover the code a customer actually gets, rather than a hand-written
 approximation of it.
@@ -32,7 +32,7 @@ from sdk.input_types import (
     LedgerMatchInput,
     SchemaInput,
 )
-from sdk.typed_entries import CardSettleV1, OrderPlacedV1
+from sdk.typed_entries import OrderPlacedV1
 
 TEMPLATE_SCHEMA = Path(__file__).parent / "template-schema" / "schema.json"
 UNKNOWN_ENTRY_TYPE = "not-in-this-schema"
@@ -90,48 +90,55 @@ async def setup_ledger(client: Client) -> str:
     return ledger_ik
 
 
+def order_placed(
+    ik: str, ledger_ik: str, user_id: str, order_cost: str, platform_fee: str
+) -> OrderPlacedV1:
+    """An `order_placed` payload; the ids that do not matter here are random."""
+    return OrderPlacedV1(
+        ik=ik,
+        ledger_ik=ledger_ik,
+        user_id=user_id,
+        order_id=str(uuid4()),
+        order_cost=order_cost,
+        currency=CURRENCY,
+        platform_fee=platform_fee,
+        driver_fee="200",
+        restaurant_id=str(uuid4()),
+        driver_id=str(uuid4()),
+    )
+
+
 @pytest.mark.asyncio
 async def test_add_ledger_entries(snapshot_client: Client) -> None:
-    """A batch of two different typed entry types commits, in input order."""
+    """A batch of two `order_placed` entries commits, in input order."""
     ledger_ik = await setup_ledger(snapshot_client)
-    user_id, order_id = str(uuid4()), str(uuid4())
-    order_ik, settle_ik = str(uuid4()), str(uuid4())
+    user_id = str(uuid4())
+    first_ik, second_ik = str(uuid4()), str(uuid4())
 
     response = await snapshot_client.add_ledger_entries(
         entries=[
-            OrderPlacedV1(
-                ik=order_ik,
-                ledger_ik=ledger_ik,
-                user_id=user_id,
-                order_id=order_id,
-                order_cost="1000",
-                currency=CURRENCY,
-                platform_fee="100",
-                driver_fee="200",
-                restaurant_id=str(uuid4()),
-                driver_id=str(uuid4()),
-            ),
-            # The user owes 1300 across cost and fees; settle it in the same batch.
-            CardSettleV1(
-                ik=settle_ik,
-                ledger_ik=ledger_ik,
-                user_id=user_id,
-                order_id=order_id,
-                currency=CURRENCY,
-                amount="1300",
-            ),
+            order_placed(first_ik, ledger_ik, user_id, "1000", "100"),
+            order_placed(second_ik, ledger_ik, user_id, "500", "50"),
         ],
         headers=EXPERIMENTAL_HEADERS,
     )
 
     result = response.add_ledger_entries
     assert isinstance(result, AddLedgerEntriesAddLedgerEntriesAddLedgerEntriesResult)
-    order, settle = result.results
-    assert (order.entry.ik, order.entry.type_) == (order_ik, "order_placed")
-    assert (settle.entry.ik, settle.entry.type_) == (settle_ik, "card_settle")
+    first, second = result.results
+    assert [first.entry.ik, second.entry.ik] == [first_ik, second_ik]
+    assert {r.entry.type_ for r in result.results} == {"order_placed"}
 
-    cash_lines = [line for line in settle.lines if line.account.path == "assets/cash"]
-    assert [line.amount for line in cash_lines] == ["1300"]
+    # Each entry books its own platform fee, so the amounts track the inputs.
+    def platform_fee(committed) -> list:
+        return [
+            line.amount
+            for line in committed.lines
+            if line.account.path == "income/platform_fee"
+        ]
+
+    assert platform_fee(first) == ["100"]
+    assert platform_fee(second) == ["50"]
 
 
 @pytest.mark.asyncio
@@ -140,22 +147,13 @@ async def test_add_ledger_entries_rejects_unknown_entry_type(
 ) -> None:
     """An entry type absent from the Schema rejects the batch.
 
-    The bad entry is a raw `AddLedgerEntryInput` because a typed payload cannot
-    express an entry type the Schema does not define -- which incidentally covers
-    mixing raw and typed entries in one call.
+    Uses a raw `AddLedgerEntryInput` because a typed payload cannot express an
+    entry type the Schema does not define.
     """
     ledger_ik = await setup_ledger(snapshot_client)
 
     response = await snapshot_client.add_ledger_entries(
         entries=[
-            CardSettleV1(
-                ik=str(uuid4()),
-                ledger_ik=ledger_ik,
-                user_id=str(uuid4()),
-                order_id=str(uuid4()),
-                currency=CURRENCY,
-                amount="100",
-            ),
             AddLedgerEntryInput(
                 ik=str(uuid4()),
                 entry=LedgerEntryInput(
