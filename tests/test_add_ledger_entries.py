@@ -24,6 +24,7 @@ from sdk.add_ledger_entries import (
     AddLedgerEntriesAddLedgerEntriesBadRequestError,
 )
 from sdk.client import Client
+from sdk.enums import CurrencyCode
 from sdk.input_types import (
     AddLedgerEntryInput,
     CreateLedgerInput,
@@ -34,8 +35,13 @@ from sdk.input_types import (
 from sdk.typed_entries import CardSettleV1, OrderPlacedV1
 
 TEMPLATE_SCHEMA = Path(__file__).parent / "template-schema" / "schema.json"
-CURRENCY = "USD"
 UNKNOWN_ENTRY_TYPE = "not-in-this-schema"
+
+# The Schema declares `currency` as a templated `String`, so the generated
+# payloads annotate it `str` rather than `CurrencyCode`. Passing the generated
+# enum anyway keeps the code typo-proof; because it subclasses `str`, pydantic
+# coerces it to the plain `"USD"` and the wire payload is unchanged.
+CURRENCY = CurrencyCode.USD
 
 # `addLedgerEntries` is gated behind this header. Passed per call rather than
 # baked into the client, so the SDK stays free of experiment-specific behaviour.
