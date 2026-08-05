@@ -22,16 +22,22 @@ class TypedLedgerEntry(BaseModel):
     Subclasses declare one field per Schema parameter. The serializer below
     reshapes those flat fields into the nested `AddLedgerEntryInput` the API
     expects, so instances can be passed to `add_ledger_entries` directly.
+
+    That makes dumping one-way: `model_dump()` returns the `AddLedgerEntryInput`
+    shape rather than this model's own fields, so
+    `type(entry).model_validate(entry.model_dump())` does not round-trip. Dumps
+    are for sending; keep the instance itself if you need to log or cache one.
     """
 
     ENTRY_TYPE: ClassVar[str] = ""
-    TYPE_VERSION: ClassVar[Optional[int]] = None
+    TYPE_VERSION: ClassVar[int] = 1
     # Maps Schema parameter name -> Python field name. These differ only when a
     # parameter is camelCased or collides with a field on this class.
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {}
 
     ik: Any
     ledger_ik: Any
+    description: Optional[str] = None
     posted: Optional[Any] = None
     tags: Optional[List[LedgerEntryTagInput]] = None
     groups: Optional[List[LedgerEntryGroupInput]] = None
@@ -54,6 +60,7 @@ class TypedLedgerEntry(BaseModel):
                 type=self.ENTRY_TYPE,
                 typeVersion=self.TYPE_VERSION,
                 parameters=self.entry_parameters(),
+                description=self.description,
                 posted=self.posted,
                 tags=self.tags,
                 groups=self.groups,
@@ -89,7 +96,7 @@ class CardSettleV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "card_settle"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "user_id": "user_id",
         "order_id": "order_id",
@@ -110,7 +117,7 @@ class DisputePayoutInitiateV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "dispute_payout_initiate"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "user_id": "user_id",
         "disputes_id": "disputes_id",
@@ -135,7 +142,7 @@ class DisputePayoutSettleV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "dispute_payout_settle"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "user_id": "user_id",
         "disputes_id": "disputes_id",
@@ -158,7 +165,7 @@ class DriverPayoutInitiateV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "driver_payout_initiate"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "driver_id": "driver_id",
         "order_id": "order_id",
@@ -181,7 +188,7 @@ class DriverPayoutSettleV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "driver_payout_settle"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "driver_id": "driver_id",
         "payout_id": "payout_id",
@@ -202,7 +209,7 @@ class OrderPlacedV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "order_placed"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "user_id": "user_id",
         "order_id": "order_id",
@@ -231,7 +238,7 @@ class OrderPlacedV2(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "order_placed"
-    TYPE_VERSION: ClassVar[Optional[int]] = 2
+    TYPE_VERSION: ClassVar[int] = 2
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "user_id": "user_id",
         "order_id": "order_id",
@@ -262,7 +269,7 @@ class RestaurantPayoutInitiateV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "restaurant_payout_initiate"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "restaurant_id": "restaurant_id",
         "order_id": "order_id",
@@ -285,7 +292,7 @@ class RestaurantPayoutSettleV1(TypedLedgerEntry):
     """
 
     ENTRY_TYPE: ClassVar[str] = "restaurant_payout_settle"
-    TYPE_VERSION: ClassVar[Optional[int]] = 1
+    TYPE_VERSION: ClassVar[int] = 1
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {
         "restaurant_id": "restaurant_id",
         "payout_id": "payout_id",

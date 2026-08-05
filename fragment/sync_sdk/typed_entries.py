@@ -22,16 +22,22 @@ class TypedLedgerEntry(BaseModel):
     Subclasses declare one field per Schema parameter. The serializer below
     reshapes those flat fields into the nested `AddLedgerEntryInput` the API
     expects, so instances can be passed to `add_ledger_entries` directly.
+
+    That makes dumping one-way: `model_dump()` returns the `AddLedgerEntryInput`
+    shape rather than this model's own fields, so
+    `type(entry).model_validate(entry.model_dump())` does not round-trip. Dumps
+    are for sending; keep the instance itself if you need to log or cache one.
     """
 
     ENTRY_TYPE: ClassVar[str] = ""
-    TYPE_VERSION: ClassVar[Optional[int]] = None
+    TYPE_VERSION: ClassVar[int] = 1
     # Maps Schema parameter name -> Python field name. These differ only when a
     # parameter is camelCased or collides with a field on this class.
     PARAMETER_FIELDS: ClassVar[Dict[str, str]] = {}
 
     ik: Any
     ledger_ik: Any
+    description: Optional[str] = None
     posted: Optional[Any] = None
     tags: Optional[List[LedgerEntryTagInput]] = None
     groups: Optional[List[LedgerEntryGroupInput]] = None
@@ -54,6 +60,7 @@ class TypedLedgerEntry(BaseModel):
                 type=self.ENTRY_TYPE,
                 typeVersion=self.TYPE_VERSION,
                 parameters=self.entry_parameters(),
+                description=self.description,
                 posted=self.posted,
                 tags=self.tags,
                 groups=self.groups,
