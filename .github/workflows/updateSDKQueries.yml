@@ -54,10 +54,14 @@ jobs:
           rm -rf tests/template-schema
           cp -R ../graphql-queries/template-schema tests/template-schema
 
+      # `make snapshots` regenerates tests/snapshots from the queries just
+      # copied. Without it the sync PR ships updated queries alongside stale
+      # snapshots, and the `snapshots` job in tests.yml fails on every sync.
       - name: Generate SDK
         working-directory: ./fragment-python
         run: |
           make build
+          make snapshots
           make lint
 
       - name: Create Pull Request
