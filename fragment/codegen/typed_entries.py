@@ -25,6 +25,7 @@ import ast
 from dataclasses import dataclass, field
 from functools import cache
 
+from ariadne_codegen.client_generators.constants import UNSET_TYPE_NAME
 from ariadne_codegen.utils import process_name, str_to_pascal_case, str_to_snake_case
 from graphql import (
     FieldNode,
@@ -301,12 +302,28 @@ def collect_annotations(
     the equivalent client method's arguments, including custom scalar handling.
     ariadne reorders arguments to put required ones first, so this matches by
     name rather than by position.
+
+    Depends on RewriteUnsetTypeMethodArguments having already collapsed
+    `Union[Optional[X], UnsetType]` down to `Optional[X]`, which the plugin
+    ordering guarantees. Raises if that has not happened.
     """
     generated: dict[str, str] = {}
     for arg in method_def.args.args:
         if arg.arg == "self" or arg.annotation is None:
             continue
-        generated[arg.arg] = ast.unparse(arg.annotation)
+        annotation = ast.unparse(arg.annotation)
+        if UNSET_TYPE_NAME in annotation:
+            # RewriteUnsetTypeMethodArguments has not run yet. Copying this
+            # annotation would emit `UnsetType` into a module that does not
+            # import it, and the generated SDK would fail to import at all.
+            # Better to stop here than to write out a broken package.
+            raise RuntimeError(
+                f"Annotation {annotation!r} for argument {arg.arg!r} still "
+                f"mentions {UNSET_TYPE_NAME}. GenerateTypedLedgerEntries must be "
+                "listed after RewriteUnsetTypeMethodArguments in the codegen "
+                "plugin list; see get_codegen_config in fragment/codegen/helpers.py."
+            )
+        generated[arg.arg] = annotation
 
     annotations: dict[str, str] = {}
     for vd in operation_definition.variable_definitions:

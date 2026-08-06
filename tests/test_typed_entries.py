@@ -23,6 +23,7 @@ from fragment.codegen.typed_entries import (
     EntryParameter,
     EntrySpec,
     _safe_field_name,
+    collect_annotations,
     extract_entry_spec,
     render_module,
     resolve_class_names,
@@ -404,3 +405,31 @@ def test_colliding_parameters_keep_distinct_wire_keys(sample: type) -> None:
     rendered = render_module([spec_])
     assert '"user_id": "user_id",' in rendered
     assert '"userId": "user_id_2",' in rendered
+
+
+def test_collect_annotations_rejects_an_unrewritten_unset_type() -> None:
+    """Guards a load-bearing plugin order.
+
+    `collect_annotations` copies annotations off the generated client method, so
+    it depends on `RewriteUnsetTypeMethodArguments` having already collapsed
+    `Union[Optional[X], UnsetType]`. Listed the other way round, the typed module
+    gets `UnsetType` without importing it and the whole SDK fails to import.
+    """
+    method = ast.parse(
+        "async def post_thing(self, memo: Union[Optional[str], UnsetType] = None): ..."
+    ).body[0]
+    assert isinstance(method, ast.AsyncFunctionDef)
+    op = operation(parameters="memo: $memo", variables="$memo: String")
+
+    with pytest.raises(RuntimeError, match="UnsetType"):
+        collect_annotations(method, op)
+
+
+def test_collect_annotations_accepts_a_rewritten_annotation() -> None:
+    method = ast.parse(
+        "async def post_thing(self, memo: Optional[str] = None): ..."
+    ).body[0]
+    assert isinstance(method, ast.AsyncFunctionDef)
+    op = operation(parameters="memo: $memo", variables="$memo: String")
+
+    assert collect_annotations(method, op) == {"memo": "Optional[str]"}
