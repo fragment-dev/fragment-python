@@ -356,3 +356,51 @@ def test_generated_batch_method_coerces_entries_to_a_list() -> None:
         and any(isinstance(k, ast.Constant) and k.value == "entries" for k in node.keys)
     ]
     assert assignments == ["{'entries': list(entries)}"]
+
+
+def test_parameters_that_snake_case_alike_get_separate_fields() -> None:
+    """Two Schema names can collapse to one Python field; they must not share it.
+
+    Pydantic accepts a duplicated field declaration and lets the last one win,
+    which would put a single value under both wire keys.
+    """
+    spec_ = extract_entry_spec(
+        operation(
+            parameters="user_id: $snake, userId: $camel",
+            variables="$snake: String!, $camel: String!",
+        ),
+        annotations={"snake": "str", "camel": "str"},
+    )
+    assert spec_ is not None
+    assert [(p.name, p.field_name) for p in spec_.parameters] == [
+        ("user_id", "user_id"),
+        ("userId", "user_id_2"),
+    ]
+
+
+def test_three_way_field_collision_keeps_going() -> None:
+    spec_ = extract_entry_spec(
+        operation(
+            parameters="user_id: $a, userId: $b, USER_ID: $c",
+            variables="$a: String!, $b: String!, $c: String!",
+        ),
+        annotations={"a": "str", "b": "str", "c": "str"},
+    )
+    assert spec_ is not None
+    field_names = [p.field_name for p in spec_.parameters]
+    assert len(set(field_names)) == 3, field_names
+
+
+def test_colliding_parameters_keep_distinct_wire_keys(sample: type) -> None:
+    """The rename is local. Each Schema name still carries its own value."""
+    spec_ = extract_entry_spec(
+        operation(
+            parameters="user_id: $snake, userId: $camel",
+            variables="$snake: String!, $camel: String!",
+        ),
+        annotations={"snake": "str", "camel": "str"},
+    )
+    assert spec_ is not None
+    rendered = render_module([spec_])
+    assert '"user_id": "user_id",' in rendered
+    assert '"userId": "user_id_2",' in rendered

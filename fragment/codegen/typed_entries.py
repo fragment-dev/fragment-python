@@ -170,6 +170,7 @@ def _extract_parameters(
     }
 
     parameters: list[EntryParameter] = []
+    taken: set[str] = set()
     for param in parameters_node.fields:
         # Only variable-bound parameters are typeable. A parameter hardcoded in
         # the operation is already fixed and must not become a field.
@@ -195,12 +196,48 @@ def _extract_parameters(
         parameters.append(
             EntryParameter(
                 name=param.name.value,
-                field_name=_safe_field_name(param.name.value),
+                field_name=_unique_field_name(
+                    param.name.value, taken, operation_definition
+                ),
                 annotation=annotation,
                 required=required,
             )
         )
     return parameters
+
+
+def _unique_field_name(
+    schema_name: str,
+    taken: set[str],
+    operation_definition: OperationDefinitionNode,
+) -> str:
+    """Give this parameter a field name no sibling parameter already holds.
+
+    `_safe_field_name` cannot see the other parameters, so two Schema names that
+    snake_case alike (`user_id` and `userId`) both arrive as `user_id`. Pydantic
+    accepts the duplicate declaration and the last one wins, which puts one
+    value under both wire keys. The suffix here is the same idea as the one
+    `resolve_class_names` applies to class names, one level down.
+
+    `taken` is mutated so later parameters see the names already claimed.
+    """
+    field_name = _safe_field_name(schema_name)
+    if field_name in taken:
+        base = field_name
+        counter = 2
+        while field_name in taken:
+            field_name = f"{base}_{counter}"
+            counter += 1
+        console_log.warning(
+            "Parameters in operation %s map to the same Python field %r; %r is "
+            "generated as %r instead. The wire payload is unaffected.",
+            operation_definition.name.value if operation_definition.name else "?",
+            base,
+            schema_name,
+            field_name,
+        )
+    taken.add(field_name)
+    return field_name
 
 
 def extract_entry_spec(
