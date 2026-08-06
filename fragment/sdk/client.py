@@ -263,7 +263,7 @@ class Client(AsyncFragmentClient):
               }
             }
             """)
-        variables: dict[str, object] = {"entries": entries}
+        variables: dict[str, object] = {"entries": list(entries)}
         response = await self.execute(
             query=query,
             operation_name="addLedgerEntries",

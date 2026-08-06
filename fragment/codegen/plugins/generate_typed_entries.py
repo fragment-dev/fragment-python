@@ -73,6 +73,11 @@ class GenerateTypedLedgerEntries(Plugin):
         `Sequence` of either keeps raw inputs working while accepting typed
         models directly -- `Sequence` because `list` is invariant, so
         `list[AuthCapture]` would otherwise be rejected.
+
+        Widening the annotation alone would be a runtime trap. The base client
+        recurses into variables with `isinstance(value, list)`, so a tuple would
+        satisfy the annotation, skip conversion, and reach `json.dumps` as model
+        objects. `_coerce_entries_to_list` closes that.
         """
         for arg in method_def.args.args:
             if arg.arg != ENTRIES_ARGUMENT:
@@ -84,6 +89,7 @@ class GenerateTypedLedgerEntries(Plugin):
                 "Sequence[Union[AddLedgerEntryInput, TypedLedgerEntry]]",
                 mode="eval",
             ).body
+            self._coerce_entries_to_list(method_def)
             self.widened_entries_argument = True
             return
 
@@ -91,6 +97,39 @@ class GenerateTypedLedgerEntries(Plugin):
             "Could not find an %r argument on the generated add_ledger_entries "
             "method, so its signature was left as-is. Typed entry payloads will "
             "still serialise correctly but will not typecheck when passed to it.",
+            ENTRIES_ARGUMENT,
+        )
+
+    def _coerce_entries_to_list(
+        self, method_def: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> None:
+        """Rewrite `{"entries": entries}` to `{"entries": list(entries)}`.
+
+        The base client only recurses into `list`, so any other sequence reaches
+        the JSON encoder holding model objects. Widening the annotation is what
+        makes that reachable, so the coercion belongs with it.
+        """
+        for node in ast.walk(method_def):
+            if not isinstance(node, ast.Dict):
+                continue
+            for index, key in enumerate(node.keys):
+                if not (
+                    isinstance(key, ast.Constant) and key.value == ENTRIES_ARGUMENT
+                ):
+                    continue
+                value = node.values[index]
+                if isinstance(value, ast.Name) and value.id == ENTRIES_ARGUMENT:
+                    node.values[index] = ast.Call(
+                        func=ast.Name(id="list", ctx=ast.Load()),
+                        args=[value],
+                        keywords=[],
+                    )
+                    return
+
+        console_log.warning(
+            "Could not find the %r variables assignment in add_ledger_entries, so "
+            "it was left as-is. Passing a non-list sequence of entries will fail "
+            "to serialise.",
             ENTRIES_ARGUMENT,
         )
 

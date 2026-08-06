@@ -8,6 +8,8 @@ time it runs. `resolve_class_names` previously mutated its input, which made
 `OrderPlaced` become `OrderPlacedV1` and then `OrderPlacedV1V1`.
 """
 
+import ast
+from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Sequence
 
 import pytest
@@ -26,6 +28,11 @@ from fragment.codegen.typed_entries import (
     resolve_class_names,
 )
 from fragment.sdk.base_model import BaseModel
+
+SNAPSHOT_CLIENT = (
+    Path(__file__).parent / "snapshots" / "001-marketing-schema" / "sdk" / "client.py"
+)
+
 from fragment.sdk.input_types import (
     AddLedgerEntryInput,
     LedgerEntryConditionInput,
@@ -322,3 +329,30 @@ def test_optional_parameter_is_carried_when_set(sample: type) -> None:
     }
     assert dumped["entry"]["description"] == "a description"
     assert dumped["entry"]["posted"] == "1968-01-01T16:45:00Z"
+
+
+# --- The widened argument must not outrun what the base client converts -------
+
+
+def test_generated_batch_method_coerces_entries_to_a_list() -> None:
+    """Widening to `Sequence` is only safe if the body narrows back.
+
+    The base client recurses into variables with `isinstance(value, list)`, so a
+    tuple would satisfy the annotation, skip conversion, and reach `json.dumps`
+    still holding model objects.
+    """
+    source = (SNAPSHOT_CLIENT).read_text()
+    tree = ast.parse(source)
+    method = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "add_ledger_entries"
+    )
+    assignments = [
+        ast.unparse(node)
+        for node in ast.walk(method)
+        if isinstance(node, ast.Dict)
+        and any(isinstance(k, ast.Constant) and k.value == "entries" for k in node.keys)
+    ]
+    assert assignments == ["{'entries': list(entries)}"]
