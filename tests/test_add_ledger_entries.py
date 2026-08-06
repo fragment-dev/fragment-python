@@ -34,6 +34,8 @@ from sdk.input_types import (
 )
 from sdk.typed_entries import OrderPlacedV1
 
+pytestmark = pytest.mark.integration
+
 TEMPLATE_SCHEMA = Path(__file__).parent / "template-schema" / "schema.json"
 UNKNOWN_ENTRY_TYPE = "not-in-this-schema"
 

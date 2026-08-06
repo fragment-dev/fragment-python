@@ -43,11 +43,16 @@ testpaths = ["tests"]
 # generated code rather than a hand-written approximation of it. Regenerate with
 # `make snapshots`.
 pythonpath = ["tests/snapshots/001-marketing-schema"]
+# Everything unmarked runs offline. `make unit` deselects this marker.
+markers = ["integration: needs live API credentials; see tests/conftest.py"]
 
 [tool.mypy]
 # Same path pytest uses, so `mypy tests/` can resolve the snapshotted `sdk`
 # package and actually typecheck calls against the generated typed payloads.
 mypy_path = "tests/snapshots/001-marketing-schema"
+# tests/type_checks/ writes "this call is rejected" as `# type: ignore[...]`.
+# This turns the day it stops being rejected into a failure, not a silent pass.
+warn_unused_ignores = true
 
 [tool.pylint.messages_control]
 max-line-length = 88

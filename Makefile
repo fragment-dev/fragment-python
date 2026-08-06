@@ -21,8 +21,15 @@ sort_order:
 style:
 	poetry run black fragment/ tests/
 
+# tests/ is checked too: tests/type_checks/ asserts what a caller sees when
+# calling the generated client, which no runtime test can cover.
 typecheck:
 	poetry run mypy -p fragment
+	poetry run mypy tests/
+
+# Everything that needs no credentials and no network.
+unit:
+	poetry run pytest -m "not integration"
 
 # Integration tests. Requires CLIENT_ID, CLIENT_SECRET, SCOPE, AUTH_URL and
 # API_URL in the environment; the tests fail if any are missing.
