@@ -39,6 +39,15 @@ fragment-python-client-codegen = 'fragment.codegen.main:run'
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Makes the snapshotted client importable as `sdk`, so tests exercise the
+# generated code rather than a hand-written approximation of it. Regenerate with
+# `make snapshots`.
+pythonpath = ["tests/snapshots/001-marketing-schema"]
+
+[tool.mypy]
+# Same path pytest uses, so `mypy tests/` can resolve the snapshotted `sdk`
+# package and actually typecheck calls against the generated typed payloads.
+mypy_path = "tests/snapshots/001-marketing-schema"
 
 [tool.pylint.messages_control]
 max-line-length = 88

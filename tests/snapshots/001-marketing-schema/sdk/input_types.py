@@ -27,9 +27,9 @@ from .enums import (
 
 class AddLedgerEntryInput(BaseModel):
     entry: "LedgerEntryInput"
-    "The [Ledger Entry](https://fragment.dev/api-reference/api-types#input-types-ledgerentryinput) to commit"
+    "The [Ledger Entry](https://fragment.dev/api-reference/api-types#input-types-ledgerentryinput) to add"
     ik: Any
-    "The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this entry"
+    "The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this Ledger Entry"
 
 
 class ChartOfAccountsInput(BaseModel):

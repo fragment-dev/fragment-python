@@ -89,6 +89,7 @@ from .enums import (
     LedgerMigrationStatus,
     LedgerTypes,
     LinkType,
+    PaymentStatus,
     PostLinesAs,
     ReadBalanceConsistencyMode,
     SceneEventType,
@@ -640,6 +641,7 @@ __all__ = [
     "MigrateLedgerEntryMigrateLedgerEntryMigrateLedgerEntryResultReversingLedgerEntryLines",
     "MigrateLedgerEntryMigrateLedgerEntryMigrateLedgerEntryResultReversingLedgerEntryLinesNodes",
     "MigrateLedgerEntryMigrateLedgerEntryMigrateLedgerEntryResultReversingLedgerEntryLinesNodesAccount",
+    "PaymentStatus",
     "PostLinesAs",
     "ReadBalanceConsistencyMode",
     "ReconcileTx",
@@ -739,4 +741,11 @@ __all__ = [
     "UpdateLedgerUpdateLedgerUpdateLedgerResult",
     "UpdateLedgerUpdateLedgerUpdateLedgerResultLedger",
     "Upload",
+]
+
+from .typed_entries import TypedLedgerEntry, to_entry_inputs
+
+__all__ += [
+    "TypedLedgerEntry",
+    "to_entry_inputs",
 ]

@@ -39,9 +39,16 @@ def get_codegen_config(
                 base_client_name=client_name,
                 base_client_file_path=get_project_path_relative_to_file(file_path),
                 async_client=False if use_sync_client else True,
+                # Order matters. GenerateTypedLedgerEntries copies annotations
+                # off the generated client methods, so it has to run after
+                # RewriteUnsetTypeMethodArguments has turned
+                # `Union[Optional[X], UnsetType]` into `Optional[X]`. Listed
+                # earlier, it emits `UnsetType` into a module that never imports
+                # it. collect_annotations raises if that ever happens.
                 plugins=[
                     "fragment.codegen.plugins.get_file_comment.GenerateFileComment",
                     "fragment.codegen.plugins.generate_client_method.RewriteUnsetTypeMethodArguments",
+                    "fragment.codegen.plugins.generate_typed_entries.GenerateTypedLedgerEntries",
                 ],
             ),
         },

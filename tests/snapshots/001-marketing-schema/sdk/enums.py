@@ -260,6 +260,12 @@ class LinkType(str, Enum):
     UnitLink = "UnitLink"
 
 
+class PaymentStatus(str, Enum):
+    processing = "processing"
+    requires_confirmation = "requires_confirmation"
+    settled = "settled"
+
+
 class PostLinesAs(str, Enum):
     net_amounts = "net_amounts"
     raw_lines = "raw_lines"

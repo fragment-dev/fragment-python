@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 Releases prior to `1.0.0` were published before this changelog was added and
 are not documented here.
 
+## [Unreleased]
+
+### Added
+
+- `AddLedgerEntries` commits a batch of Ledger Entries in one atomic,
+  strongly-consistent transaction.
+- Strongly-typed batch payloads. Codegen now emits a `typed_entries` module with
+  one model per Ledger Entry type, derived from the per-entry-type
+  `addLedgerEntry` operations in the codegen input directory. Because a batch
+  mutation takes one list of one input type, GraphQL cannot type each entry's
+  `parameters` field individually; these models do. They can be passed to
+  `add_ledger_entries` directly, mixed with raw `AddLedgerEntryInput` values.
+  Model names always carry the entry type version, defaulting to `V1`.
+
 ## [1.0.0]
 
 ### Changed
