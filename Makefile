@@ -1,10 +1,14 @@
-.PHONY: lint test snapshots check-snapshots
+.PHONY: lint test snapshots check-snapshots refresh-snapshot-schema
 
 # Each tests/snapshots/*/ holds a queries.graphql and the client generated from
 # it, checked in. The pair is a regression guard: a change to codegen that alters
 # generated output shows up as a reviewable diff instead of silently.
 SNAPSHOT_DIRS := $(sort $(dir $(wildcard tests/snapshots/*/queries.graphql)))
 SNAPSHOT_PACKAGE := sdk
+# Pinned so a snapshot is a function of checked-in inputs alone. Generating
+# against the live schema made every PR fail whenever the API changed. Kept
+# outside the fixture directories, which codegen scans for operations.
+SNAPSHOT_SCHEMA := tests/snapshots/schema.graphql
 
 install:
 	poetry install --with dev
@@ -34,6 +38,7 @@ snapshots:
 		rm -rf "$$dir$(SNAPSHOT_PACKAGE)"; \
 		poetry run fragment-python-client-codegen \
 			--input-dir="$$dir" \
+			--schema-path=$(SNAPSHOT_SCHEMA) \
 			--target-package-name=$(SNAPSHOT_PACKAGE) \
 			--output-dir="$$dir" || exit 1; \
 	done
@@ -54,6 +59,12 @@ check-snapshots: snapshots
 		exit 1; \
 	fi
 	@echo "Snapshots up to date."
+
+# Repin the snapshot schema to the current API. Run deliberately; the diff shows
+# what changed upstream.
+refresh-snapshot-schema:
+	poetry run python -c "import httpx; from fragment.codegen.main import GRAPHQL_SCHEMA_API_URL as u; open('$(SNAPSHOT_SCHEMA)','w').write(httpx.get(u).text)"
+	$(MAKE) snapshots
 
 build: install
 	poetry run fragment-python-client-codegen --input-dir=queries/ --target-package-name=sdk --output-dir fragment/
