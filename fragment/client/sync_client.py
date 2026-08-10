@@ -33,15 +33,18 @@ class SyncFragmentClient(BaseClient):
         super().__init__(url=api_url, http_client=http_client)
 
         self.auth_url = auth_url
-        self.expiration_time = None
-        self.token = None
+        self.expiration_time: Optional[float] = None
+        self.token: Optional[Dict[str, Any]] = None
         self.oauth2_client = OAuth2Client(client_id, client_secret, scope=auth_scope)
 
-    def refresh_token(self):
+    def refresh_token(self) -> None:
         now = time.time()
         if self.expiration_time is None or self.expiration_time <= now:
-            self.token = self.oauth2_client.fetch_token(self.auth_url)
-            self.expiration_time = now + self.token["expires_in"]
+            # Held in a local because `self.token` is declared `dict | None`,
+            # so reading the attribute back is not narrowed by the assignment.
+            token = self.oauth2_client.fetch_token(self.auth_url)
+            self.token = token
+            self.expiration_time = now + token["expires_in"]
 
     def execute(
         self,

@@ -43,11 +43,37 @@ testpaths = ["tests"]
 # generated code rather than a hand-written approximation of it. Regenerate with
 # `make snapshots`.
 pythonpath = ["tests/snapshots/001-marketing-schema"]
+# Everything unmarked runs offline. `make unit` deselects this marker.
+markers = ["integration: needs live API credentials; see tests/conftest.py"]
 
 [tool.mypy]
 # Same path pytest uses, so `mypy tests/` can resolve the snapshotted `sdk`
 # package and actually typecheck calls against the generated typed payloads.
 mypy_path = "tests/snapshots/001-marketing-schema"
+# tests/type_checks/ writes "this call is rejected" as `# type: ignore[...]`.
+# This turns the day it stops being rejected into a failure, not a silent pass.
+warn_unused_ignores = true
+
+# The SDK is what customers typecheck against, so it is held to strict. The
+# codegen package is build tooling and stays on the default settings. Spelled
+# out rather than `strict = true`, which mypy only honours globally.
+[[tool.mypy.overrides]]
+module = [
+  "fragment.sdk.*",
+  "fragment.sync_sdk.*",
+  "fragment.client.*",
+  "fragment.exceptions",
+]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+no_implicit_reexport = true
+warn_return_any = true
+strict_equality = true
+extra_checks = true
 
 [tool.pylint.messages_control]
 max-line-length = 88
