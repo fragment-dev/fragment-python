@@ -57,11 +57,15 @@ jobs:
       # `make snapshots` regenerates tests/snapshots from the queries just
       # copied. Without it the sync PR ships updated queries alongside stale
       # snapshots, and the `snapshots` job in tests.yml fails on every sync.
+      # `refresh-snapshot-schema` repins tests/snapshots/schema.graphql to the
+      # current API and regenerates. Snapshots are pinned so that unrelated PRs
+      # do not fail when the API changes; this sync is where that drift is meant
+      # to surface, as a reviewable diff next to the queries it came with.
       - name: Generate SDK
         working-directory: ./fragment-python
         run: |
           make build
-          make snapshots
+          make refresh-snapshot-schema
           make lint
 
       - name: Create Pull Request
