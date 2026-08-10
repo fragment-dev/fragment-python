@@ -46,8 +46,11 @@ class AsyncFragmentClient(AsyncBaseClient):
     async def refresh_token(self) -> None:
         now = time.time()
         if self.expiration_time is None or self.expiration_time <= now:
-            self.token = await self.oauth2_client.fetch_token(self.auth_url)
-            self.expiration_time = now + self.token["expires_in"]
+            # Held in a local because `self.token` is declared `dict | None`,
+            # so reading the attribute back is not narrowed by the assignment.
+            token = await self.oauth2_client.fetch_token(self.auth_url)
+            self.token = token
+            self.expiration_time = now + token["expires_in"]
 
     async def execute(
         self,
