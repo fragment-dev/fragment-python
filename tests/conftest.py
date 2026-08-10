@@ -47,3 +47,16 @@ def credentials() -> Credentials:
 async def client(credentials: Credentials) -> AsyncIterator[Client]:
     async with Client(**credentials) as graphql_client:
         yield graphql_client
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Mark anything needing live credentials as `integration`.
+
+    Derived from fixture usage rather than written at the top of each module, so
+    a new integration test cannot forget it and a merge cannot drop it. Losing
+    one `pytestmark` line silently put two credential-bound tests into the
+    offline run, where they errored on missing environment variables.
+    """
+    for item in items:
+        if "credentials" in getattr(item, "fixturenames", ()):
+            item.add_marker(pytest.mark.integration)

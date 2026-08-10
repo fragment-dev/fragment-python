@@ -19,8 +19,6 @@ from fragment.sdk.input_types import (
     SchemaLedgerLineInput,
 )
 
-pytestmark = pytest.mark.integration
-
 ENTRY_TYPE = "user-funds-account"
 
 
