@@ -85,7 +85,7 @@ await graphql_client.add_ledger_entry(
 
 ### Post a batch of Ledger Entries
 
-To [post](https://fragment.dev/docs#post-ledger-entries-post-to-the-api) a batch of Ledger Entries in one atomic, strongly-consistent transaction:
+To [post](https://fragment.dev/guides/post-ledger-entries#batch-ledger-entries) a batch of Ledger Entries atomically:
 
 ```python
 from fragment.sdk.typed_entries import UserFundsAccountV1

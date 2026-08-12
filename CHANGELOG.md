@@ -12,8 +12,7 @@ are not documented here.
 
 ### Added
 
-- `AddLedgerEntries` commits a batch of Ledger Entries in one atomic,
-  strongly-consistent transaction.
+- `AddLedgerEntries` posts a batch of Ledger Entries atomically.
 - Strongly-typed batch payloads. Codegen now emits a `typed_entries` module with
   one model per Ledger Entry type, derived from the per-entry-type
   `addLedgerEntry` operations in the codegen input directory. Because a batch
