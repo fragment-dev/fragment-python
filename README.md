@@ -83,6 +83,33 @@ await graphql_client.add_ledger_entry(
 )
 ```
 
+### Post a batch of Ledger Entries
+
+To [post](https://fragment.dev/docs#post-ledger-entries-post-to-the-api) a batch of Ledger Entries in one atomic, strongly-consistent transaction:
+
+```python
+from fragment.sdk.typed_entries import UserFundsAccountV1
+
+await graphql_client.add_ledger_entries(
+  entries=[
+    UserFundsAccountV1(
+      ik="some-ik-1",
+      ledger_ik="your-ledger-ik",
+      posted="1968-01-01T16:45:00Z",
+      user_id="user-1",
+      funding_amount="20000",
+    ),
+    UserFundsAccountV1(
+      ik="some-ik-2",
+      ledger_ik="your-ledger-ik",
+      posted="1968-01-01T16:45:00Z",
+      user_id="user-2",
+      funding_amount="20000",
+    ),
+  ]
+)
+```
+
 ### Read a Ledger Account's Balance
 
 To read a Ledger Account's [balance](https://fragment.dev/docs#read-balances-latest):
