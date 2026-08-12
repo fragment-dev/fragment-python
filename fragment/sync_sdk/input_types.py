@@ -21,6 +21,9 @@ from .enums import (
     SchemaConsistencyMode,
     SchemaLedgerAccountStatus,
     SchemaLedgerEntryStatus,
+    SchemaPaymentEntryStatus,
+    SchemaPaymentTypeDirection,
+    SchemaSystemLineKind,
     TxType,
 )
 
@@ -576,6 +579,13 @@ class LedgerLineMatchInput(BaseModel):
     "The FRAGMENT ID of the ledger line"
 
 
+class LedgerLineTagInput(BaseModel):
+    key: Any
+    "The key of this tag. Can be up to 128 characters long."
+    value: Any
+    "The value associated with this tag's key. Can be up to 128 characters long."
+
+
 class LedgerLinesFilterSet(BaseModel):
     created: Optional["DateTimeFilter"] = None
     "Filter by the created timestamp of the Ledger Line. This is the wall-clock time when the Ledger Line was created."
@@ -726,6 +736,8 @@ class SchemaInput(BaseModel):
     "The Ledger Entries to add to the Schema."
     name: Optional[Any] = None
     "The human-readable name of the Schema."
+    payments: Optional["SchemaPaymentsInput"] = None
+    "EXPERIMENTAL: The Payment Types to add to the Schema."
     scenes: Optional[list["SceneInput"]] = None
     "Any scenes associated with this Schema."
 
@@ -879,10 +891,78 @@ class SchemaMatchInput(BaseModel):
     "Optional parameter to specify version of requested Schema. If not provided, it defaults to 0, representing the latest available version for the provided Schema key."
 
 
+class SchemaPaymentAccountingInput(BaseModel):
+    """EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
+    through its lifecycle, keyed by lifecycle transition."""
+
+    needs_confirmation_to_processing: Optional["SchemaPaymentEntryInput"] = None
+    "Posted when the payment enters processing. Optional."
+    processing_to_settled: "SchemaPaymentEntryInput"
+    "Posted when the payment settles. Every Payment Type must define it."
+
+
+class SchemaPaymentEntryInput(BaseModel):
+    """EXPERIMENTAL: The Ledger Entry a Payment Type posts on a payment lifecycle event."""
+
+    description: Optional[Any] = None
+    "Human-readable description of the payment entry."
+    lines: list["SchemaPaymentLineInput"]
+    "The Ledger Lines in the payment entry."
+
+
 class SchemaPaymentInput(BaseModel):
     """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
 
     penguin: bool
+
+
+class SchemaPaymentLineInput(BaseModel):
+    """EXPERIMENTAL: A Ledger Line in a payment entry."""
+
+    account: "SchemaLedgerAccountMatchInput"
+    "The Ledger Account this line will be posted to.\nIt supports parameters in its attributes via handlebars syntax."
+    amount: Any
+    "The amount of the line. It supports parameters via the handlebars syntax and addition (+) and subtraction (-)."
+    currency: Optional["SchemaCurrencyMatchInput"] = None
+    "The currency of the line. This is required if the Ledger Account has currencyMode multi.\nIt supports parameters in its attributes via handlebars syntax."
+    description: Optional[Any] = None
+    "Human-readable description of the line."
+    key: Any
+    "The key for the line. Keys must be unique within a payment entry."
+    system: Optional[SchemaSystemLineKind] = None
+    "Marks this as a system-owned line. Fragment fills the amounts of system\nlines when the payment entry is posted."
+
+
+class SchemaPaymentTypeDetailsInput(BaseModel):
+    """EXPERIMENTAL: The payment a Payment Type creates."""
+
+    amount: Any
+    "The amount requested for the payment, as a parameterized expression filled\nfrom createPayment parameters."
+    direction: SchemaPaymentTypeDirection
+    "The direction the payment moves money."
+
+
+class SchemaPaymentTypeInput(BaseModel):
+    """EXPERIMENTAL: A Payment Type in a Schema. All Payment Types defined in a
+    Schema must have a unique `type` and `typeVersion` pair."""
+
+    accounting: "SchemaPaymentAccountingInput"
+    "The Ledger Entries posted as the payment moves through its lifecycle."
+    payment: "SchemaPaymentTypeDetailsInput"
+    "The payment this Payment Type creates."
+    status: SchemaPaymentEntryStatus
+    "The status of this Payment Type."
+    type_: Any = Field(alias="type")
+    "The type of this Payment Type. This is a stable, unique identifier for it.\nUniqueness is enforced at the Schema level."
+    type_version: int = Field(alias="typeVersion")
+    "The version of the Payment Type."
+
+
+class SchemaPaymentsInput(BaseModel):
+    """EXPERIMENTAL: The Payment Types in your Schema."""
+
+    types: list["SchemaPaymentTypeInput"]
+    "A list of Payment Type definitions."
 
 
 class SchemaRepeatedConfigInput(BaseModel):
@@ -995,6 +1075,10 @@ class UpdateLedgerAccountInput(BaseModel):
 class UpdateLedgerEntryInput(BaseModel):
     groups: Optional[list["LedgerEntryGroupInput"]] = None
     "The list of Groups to add to this Ledger Entry."
+    ledger_lines: Optional[list["UpdateLedgerLineInput"]] = Field(
+        alias="ledgerLines", default=None
+    )
+    "The list of Ledger Line updates to apply to Ledger Lines on this Ledger Entry."
     tags: Optional[list["LedgerEntryTagInput"]] = None
     "The list of Tags to add and/or update on this Ledger Entry."
     tags_to_remove: Optional[list["LedgerEntryTagInput"]] = Field(
@@ -1006,6 +1090,17 @@ class UpdateLedgerEntryInput(BaseModel):
 class UpdateLedgerInput(BaseModel):
     name: Optional[str] = None
     "The new Ledger name. "
+
+
+class UpdateLedgerLineInput(BaseModel):
+    ledger_line: "LedgerLineMatchInput" = Field(alias="ledgerLine")
+    "The Ledger Line that is being updated. It must belong to the Ledger Entry being updated."
+    tags: Optional[list["LedgerLineTagInput"]] = None
+    "The list of Tags to add and/or update on this Ledger Line."
+    tags_to_remove: Optional[list["LedgerLineTagInput"]] = Field(
+        alias="tagsToRemove", default=None
+    )
+    "The list of Tags to remove from this Ledger Line."
 
 
 AddLedgerEntryInput.model_rebuild()
@@ -1049,6 +1144,12 @@ SchemaLedgerEntriesInput.model_rebuild()
 SchemaLedgerEntryConditionInput.model_rebuild()
 SchemaLedgerEntryInput.model_rebuild()
 SchemaLedgerLineInput.model_rebuild()
+SchemaPaymentAccountingInput.model_rebuild()
+SchemaPaymentEntryInput.model_rebuild()
+SchemaPaymentLineInput.model_rebuild()
+SchemaPaymentTypeInput.model_rebuild()
+SchemaPaymentsInput.model_rebuild()
 TagFilter.model_rebuild()
 UpdateLedgerAccountInput.model_rebuild()
 UpdateLedgerEntryInput.model_rebuild()
+UpdateLedgerLineInput.model_rebuild()

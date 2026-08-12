@@ -3065,6 +3065,16 @@ type LedgerLineTag {
   value: SafeString!
 }
 
+input LedgerLineTagInput {
+  """The key of this tag. Can be up to 128 characters long."""
+  key: SafeString!
+
+  """
+  The value associated with this tag's key. Can be up to 128 characters long.
+  """
+  value: SafeString!
+}
+
 """A paginated list of Ledger Lines"""
 type LedgerLinesConnection {
   """The current page of results"""
@@ -3509,7 +3519,7 @@ type Mutation {
     ledgerEntry: LedgerEntryMatchInput!
 
     """
-    The payload containing the fields to update. Only a Ledger Entry's tags can be updated.
+    The payload containing the fields to update. Only a Ledger Entry's tags and its Ledger Lines' tags can be updated.
     """
     update: UpdateLedgerEntryInput!
   ): UpdateLedgerEntryResponse!
@@ -4018,6 +4028,9 @@ input SchemaInput {
   """The human-readable name of the Schema."""
   name: ParameterizedString
 
+  """EXPERIMENTAL: The Payment Types to add to the Schema."""
+  payments: SchemaPaymentsInput
+
   """Any scenes associated with this Schema."""
   scenes: [SceneInput!]
 }
@@ -4303,9 +4316,121 @@ input SchemaMatchInput {
   version: Int
 }
 
+"""
+EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
+through its lifecycle, keyed by lifecycle transition.
+"""
+input SchemaPaymentAccountingInput {
+  """Posted when the payment enters processing. Optional."""
+  needs_confirmation_to_processing: SchemaPaymentEntryInput
+
+  """Posted when the payment settles. Every Payment Type must define it."""
+  processing_to_settled: SchemaPaymentEntryInput!
+}
+
+"""
+EXPERIMENTAL: The Ledger Entry a Payment Type posts on a payment lifecycle event.
+"""
+input SchemaPaymentEntryInput {
+  """Human-readable description of the payment entry."""
+  description: ParameterizedString
+
+  """The Ledger Lines in the payment entry."""
+  lines: [SchemaPaymentLineInput!]!
+}
+
+"""The status of a Payment Type."""
+enum SchemaPaymentEntryStatus {
+  """The Payment Type is active."""
+  active
+}
+
 """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
 input SchemaPaymentInput {
   penguin: Boolean!
+}
+
+"""EXPERIMENTAL: A Ledger Line in a payment entry."""
+input SchemaPaymentLineInput {
+  """
+  The Ledger Account this line will be posted to.
+  It supports parameters in its attributes via handlebars syntax.
+  """
+  account: SchemaLedgerAccountMatchInput!
+
+  """
+  The amount of the line. It supports parameters via the handlebars syntax and addition (+) and subtraction (-).
+  """
+  amount: ParameterizedString!
+
+  """
+  The currency of the line. This is required if the Ledger Account has currencyMode multi.
+  It supports parameters in its attributes via handlebars syntax.
+  """
+  currency: SchemaCurrencyMatchInput
+
+  """Human-readable description of the line."""
+  description: ParameterizedString
+
+  """The key for the line. Keys must be unique within a payment entry."""
+  key: SafeString!
+
+  """
+  Marks this as a system-owned line. Fragment fills the amounts of system
+  lines when the payment entry is posted.
+  """
+  system: SchemaSystemLineKind
+}
+
+"""EXPERIMENTAL: The payment a Payment Type creates."""
+input SchemaPaymentTypeDetailsInput {
+  """
+  The amount requested for the payment, as a parameterized expression filled
+  from createPayment parameters.
+  """
+  amount: ParameterizedString!
+
+  """The direction the payment moves money."""
+  direction: SchemaPaymentTypeDirection!
+}
+
+"""The direction a Payment Type moves money."""
+enum SchemaPaymentTypeDirection {
+  """Money moves into the Payment Account."""
+  payin
+
+  """Money moves out of the Payment Account."""
+  payout
+}
+
+"""
+EXPERIMENTAL: A Payment Type in a Schema. All Payment Types defined in a
+Schema must have a unique `type` and `typeVersion` pair.
+"""
+input SchemaPaymentTypeInput {
+  """The Ledger Entries posted as the payment moves through its lifecycle."""
+  accounting: SchemaPaymentAccountingInput!
+
+  """The payment this Payment Type creates."""
+  payment: SchemaPaymentTypeDetailsInput!
+
+  """The status of this Payment Type."""
+  status: SchemaPaymentEntryStatus!
+
+  """
+  The type of this Payment Type. This is a stable, unique identifier for it.
+  Uniqueness is enforced at the Schema level.
+  """
+  type: SafeString!
+
+  """The version of the Payment Type."""
+  typeVersion: Int!
+}
+
+"""EXPERIMENTAL: The Payment Types in your Schema."""
+input SchemaPaymentsInput {
+  """A list of Payment Type definitions."""
+  types: [SchemaPaymentTypeInput!]!
 }
 
 """
@@ -4317,6 +4442,22 @@ input SchemaRepeatedConfigInput {
   The key of the array parameter whose elements expand this line or condition.
   """
   key: SafeString!
+}
+
+"""
+Identifies a system-owned line in a payment entry. The amounts of system
+lines are filled by Fragment when the payment entry is posted.
+"""
+enum SchemaSystemLineKind {
+  """
+  The line carrying the Fragment fee amount, posted to the Payment Account.
+  """
+  payment_fee_line
+
+  """
+  The line carrying the settled payment amount, posted to the Payment Account.
+  """
+  payment_settlement_line
 }
 
 """
@@ -4669,6 +4810,11 @@ input UpdateLedgerEntryInput {
   """The list of Groups to add to this Ledger Entry."""
   groups: [LedgerEntryGroupInput!]
 
+  """
+  The list of Ledger Line updates to apply to Ledger Lines on this Ledger Entry.
+  """
+  ledgerLines: [UpdateLedgerLineInput!]
+
   """The list of Tags to add and/or update on this Ledger Entry."""
   tags: [LedgerEntryTagInput!]
 
@@ -4686,6 +4832,19 @@ type UpdateLedgerEntryResult {
 input UpdateLedgerInput {
   """The new Ledger name. """
   name: String
+}
+
+input UpdateLedgerLineInput {
+  """
+  The Ledger Line that is being updated. It must belong to the Ledger Entry being updated.
+  """
+  ledgerLine: LedgerLineMatchInput!
+
+  """The list of Tags to add and/or update on this Ledger Line."""
+  tags: [LedgerLineTagInput!]
+
+  """The list of Tags to remove from this Ledger Line."""
+  tagsToRemove: [LedgerLineTagInput!]
 }
 
 union UpdateLedgerResponse = BadRequestError | InternalError | UpdateLedgerResult

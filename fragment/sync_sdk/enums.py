@@ -299,6 +299,20 @@ class SchemaLedgerEntryStatus(str, Enum):
     disabled = "disabled"
 
 
+class SchemaPaymentEntryStatus(str, Enum):
+    active = "active"
+
+
+class SchemaPaymentTypeDirection(str, Enum):
+    payin = "payin"
+    payout = "payout"
+
+
+class SchemaSystemLineKind(str, Enum):
+    payment_fee_line = "payment_fee_line"
+    payment_settlement_line = "payment_settlement_line"
+
+
 class StripeEnv(str, Enum):
     livemode = "livemode"
     testmode = "testmode"
