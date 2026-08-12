@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 Releases prior to `1.0.0` were published before this changelog was added and
 are not documented here.
 
+## [1.1.1]
+
+### Added
+
+- Ledger Line tags can now be updated using `updateLedgerEntry`
+
 ## [1.1.0]
 
 ### Added
