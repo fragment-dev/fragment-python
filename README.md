@@ -85,7 +85,7 @@ await graphql_client.add_ledger_entry(
 
 ### Post a batch of Ledger Entries
 
-To [post](https://fragment.dev/guides/post-ledger-entries#batch-ledger-entries) a batch of Ledger Entries atomically:
+To [post](https://fragment.dev/guides/post-ledger-entries#batch-ledger-entries) a batch of Ledger Entries atomically, construct them using the strongly-typed models generated for your Schema in `fragment.sdk.typed_entries`:
 
 ```python
 from fragment.sdk.typed_entries import UserFundsAccountV1
