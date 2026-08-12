@@ -68,7 +68,7 @@ print(get_schema_result.schema_.json())
 
 ### Post a Ledger Entry
 
-To [post](https://fragment.dev/docs#post-ledger-entries-post-to-the-api) a Ledger Entry defined in your Schema:
+To [post](https://fragment.dev/guides/post-ledger-entries#post-to-the-api) a Ledger Entry defined in your Schema:
 
 ```python
 await graphql_client.add_ledger_entry(
@@ -83,9 +83,38 @@ await graphql_client.add_ledger_entry(
 )
 ```
 
+### Post a batch of Ledger Entries
+
+To [post](https://fragment.dev/guides/post-ledger-entries#batch-ledger-entries) a batch of Ledger Entries atomically:
+
+```python
+from fragment.sdk.typed_entries import UserFundsAccountV1
+
+await graphql_client.add_ledger_entries(
+  entries=[
+    UserFundsAccountV1(
+      ik="some-ik-1",
+      ledger_ik="your-ledger-ik",
+      posted="1968-01-01T16:45:00Z",
+      user_id="user-1",
+      funding_amount="20000",
+    ),
+    UserFundsAccountV1(
+      ik="some-ik-2",
+      ledger_ik="your-ledger-ik",
+      posted="1968-01-01T16:45:00Z",
+      user_id="user-2",
+      funding_amount="20000",
+    ),
+  ]
+)
+```
+
+Construct the entries in the batch using the strongly-typed models for your Schema in the `typed_entries` module of your generated client.
+
 ### Read a Ledger Account's Balance
 
-To read a Ledger Account's [balance](https://fragment.dev/docs#read-balances-latest):
+To read a Ledger Account's [balance](https://fragment.dev/guides/read-balances#latest):
 
 ```python
 from fragment.sdk.enums import CurrencyCode
