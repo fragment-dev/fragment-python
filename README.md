@@ -68,7 +68,7 @@ print(get_schema_result.schema_.json())
 
 ### Post a Ledger Entry
 
-To [post](https://fragment.dev/docs#post-ledger-entries-post-to-the-api) a Ledger Entry defined in your Schema:
+To [post](https://fragment.dev/guides/post-ledger-entries#post-to-the-api) a Ledger Entry defined in your Schema:
 
 ```python
 await graphql_client.add_ledger_entry(
@@ -114,7 +114,7 @@ Construct the entries in the batch using the strongly-typed models for your Sche
 
 ### Read a Ledger Account's Balance
 
-To read a Ledger Account's [balance](https://fragment.dev/docs#read-balances-latest):
+To read a Ledger Account's [balance](https://fragment.dev/guides/read-balances#latest):
 
 ```python
 from fragment.sdk.enums import CurrencyCode
