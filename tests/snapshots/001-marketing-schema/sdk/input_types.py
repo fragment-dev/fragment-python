@@ -21,8 +21,8 @@ from .enums import (
     SchemaConsistencyMode,
     SchemaLedgerAccountStatus,
     SchemaLedgerEntryStatus,
-    SchemaPaymentEntryStatus,
     SchemaPaymentTypeDirection,
+    SchemaPaymentTypeStatus,
     SchemaSystemLineKind,
     TxType,
 )
@@ -118,6 +118,17 @@ class CreateLedgerInput(BaseModel):
     'Use this field to specify a timezone for queries to your Ledger. \n\nWhen aggregating balances, all transactions within a 24 hour period starting at midnight UTC are included in each day. \nYou can specify a different starting hour for balances. For example, use "-08:00" to align balances with Pacific Standard Time. \nBalance queries would then consider the start of each local day to be at 8am UTC the next day in UTC. \nThe default timezone is UTC.'
     name: str
     type_: Optional[LedgerTypes] = Field(alias="type", default=None)
+
+
+class CreatePaymentInput(BaseModel):
+    """EXPERIMENTAL: The Payment to create."""
+
+    parameters: Optional[Any] = None
+    "Parameters for the specific Payment Type. Must be a key-value pair of strings. Must be a flat object: nested objects and arrays are rejected."
+    type_: Any = Field(alias="type")
+    "The type of the Payment. Must be defined in the Schema linked to the Ledger."
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
+    "The version of the Payment Type. Defaults to the latest active version."
 
 
 class CurrencyFilter(BaseModel):
@@ -895,7 +906,7 @@ class SchemaPaymentAccountingInput(BaseModel):
     """EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
     through its lifecycle, keyed by lifecycle transition."""
 
-    needs_confirmation_to_processing: Optional["SchemaPaymentEntryInput"] = None
+    needs_payment_method_to_processing: Optional["SchemaPaymentEntryInput"] = None
     "Posted when the payment enters processing. Optional."
     processing_to_settled: "SchemaPaymentEntryInput"
     "Posted when the payment settles. Every Payment Type must define it."
@@ -950,7 +961,7 @@ class SchemaPaymentTypeInput(BaseModel):
     "The Ledger Entries posted as the payment moves through its lifecycle."
     payment: "SchemaPaymentTypeDetailsInput"
     "The payment this Payment Type creates."
-    status: SchemaPaymentEntryStatus
+    status: SchemaPaymentTypeStatus
     "The status of this Payment Type."
     type_: Any = Field(alias="type")
     "The type of this Payment Type. This is a stable, unique identifier for it.\nUniqueness is enforced at the Schema level."

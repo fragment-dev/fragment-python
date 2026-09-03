@@ -9,6 +9,7 @@ from .add_ledger_entry_runtime import AddLedgerEntryRuntime
 from .create_custom_currency import CreateCustomCurrency
 from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
+from .create_payment import CreatePayment
 from .delete_custom_txs import DeleteCustomTxs
 from .delete_ledger import DeleteLedger
 from .delete_schema import DeleteSchema
@@ -1780,3 +1781,50 @@ class Client(SyncFragmentClient):
         )
         data = self.get_data(response)
         return CreateCustomCurrency.model_validate(data)
+
+    def create_payment(
+        self,
+        ik: Any,
+        ledger_ik: Any,
+        type_: Any,
+        type_version: Optional[int] = None,
+        parameters: Optional[Any] = None,
+        **kwargs: Any
+    ) -> CreatePayment:
+        query = gql("""
+            mutation createPayment($ik: SafeString!, $ledgerIk: SafeString!, $type: SafeString!, $typeVersion: Int, $parameters: JSON) {
+              createPayment(
+                ik: $ik
+                ledger: {ik: $ledgerIk}
+                payment: {type: $type, typeVersion: $typeVersion, parameters: $parameters}
+              ) {
+                __typename
+                ... on Payment {
+                  clientSecret
+                  status
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "ik": ik,
+            "ledgerIk": ledger_ik,
+            "type": type_,
+            "typeVersion": type_version,
+            "parameters": parameters,
+        }
+        response = self.execute(
+            query=query, operation_name="createPayment", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return CreatePayment.model_validate(data)
