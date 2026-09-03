@@ -319,6 +319,24 @@ type CreateLedgerResult {
   ledger: Ledger!
 }
 
+"""EXPERIMENTAL: The Payment to create."""
+input CreatePaymentInput {
+  """
+  Parameters for the specific Payment Type. Must be a key-value pair of strings. Must be a flat object: nested objects and arrays are rejected.
+  """
+  parameters: JSON
+
+  """
+  The type of the Payment. Must be defined in the Schema linked to the Ledger.
+  """
+  type: SafeString!
+
+  """
+  The version of the Payment Type. Defaults to the latest active version.
+  """
+  typeVersion: Int
+}
+
 union CreatePaymentResponse = BadRequestError | InternalError | Payment
 
 type Currency {
@@ -3204,6 +3222,44 @@ enum LedgerMigrationStatus {
   started
 }
 
+"""EXPERIMENTAL: A Payment posted to a Ledger."""
+type LedgerPayment {
+  """The amount of this Payment, in whole cents."""
+  amount: Int96!
+  created: DateTime!
+
+  """
+  The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) the Payment was created with.
+  """
+  ik: SafeString!
+
+  """The Ledger this Payment belongs to."""
+  ledgerId: SafeString!
+
+  """
+  Parameters the Payment was created with. Only returned by the `ledgerPayment` query.
+  """
+  parameters: JSON
+
+  """The status of this Payment."""
+  status: PaymentStatus!
+
+  """The Payment Type in the Schema this Payment was created from."""
+  type: SafeString!
+
+  """The version of the Payment Type."""
+  typeVersion: Int!
+}
+
+"""EXPERIMENTAL: A paginated list of Payments."""
+type LedgerPaymentsConnection {
+  """The current page of results."""
+  nodes: [LedgerPayment!]!
+
+  """The pagination info for this list."""
+  pageInfo: PageInfo!
+}
+
 input LedgerTypeFilter {
   equalTo: LedgerTypes
 
@@ -3404,9 +3460,6 @@ type Mutation {
   Create a Payment.
   """
   createPayment(
-    """The amount in cents, between 100 and 10000000 inclusive."""
-    amount: Int96!
-
     """
     The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency)
     """
@@ -3414,6 +3467,9 @@ type Mutation {
 
     """The Ledger this Payment belongs to."""
     ledger: LedgerMatchInput!
+
+    """The Payment to create."""
+    payment: CreatePaymentInput!
   ): CreatePaymentResponse!
 
   """
@@ -3571,8 +3627,8 @@ EXPERIMENTAL — subject to change.
 Status of a Payment.
 """
 enum PaymentStatus {
+  needs_payment_method
   processing
-  requires_confirmation
   settled
 }
 
@@ -3688,6 +3744,41 @@ type Query {
     """An object specifying the ID of the LedgerLine you want to query"""
     ledgerLine: LedgerLineMatchInput!
   ): LedgerLine
+
+  """EXPERIMENTAL: Get a single Payment by its Idempotency Key."""
+  ledgerPayment(
+    """The Idempotency Key the Payment was created with."""
+    ik: SafeString!
+
+    """The Ledger the Payment belongs to."""
+    ledger: LedgerMatchInput!
+  ): LedgerPayment
+
+  """EXPERIMENTAL: List the Payments on a Ledger, most recent first."""
+  ledgerPayments(
+    """
+    Where to start paginating from, when paginating forwards. Send endCursor from a response to get its next page.
+    """
+    after: String
+
+    """
+    Where to start paginating from, when paginating backwards. Send startCursor from a response to get the previous page.
+    """
+    before: String
+
+    """
+    The number of Payments to return per page, when paginating forwards. Defaults to 20, maximum is 200.
+    """
+    first: Int
+
+    """
+    The number of Payments to return per page, when paginating backwards. Defaults to 20, maximum is 200.
+    """
+    last: Int
+
+    """The Ledger to list Payments for."""
+    ledger: LedgerMatchInput!
+  ): LedgerPaymentsConnection!
 
   """
   Query Ledgers in workspace. Ledgers are paginated and returned in reverse-chronological order by their created date.
@@ -4322,7 +4413,7 @@ through its lifecycle, keyed by lifecycle transition.
 """
 input SchemaPaymentAccountingInput {
   """Posted when the payment enters processing. Optional."""
-  needs_confirmation_to_processing: SchemaPaymentEntryInput
+  needs_payment_method_to_processing: SchemaPaymentEntryInput
 
   """Posted when the payment settles. Every Payment Type must define it."""
   processing_to_settled: SchemaPaymentEntryInput!
@@ -4337,12 +4428,6 @@ input SchemaPaymentEntryInput {
 
   """The Ledger Lines in the payment entry."""
   lines: [SchemaPaymentLineInput!]!
-}
-
-"""The status of a Payment Type."""
-enum SchemaPaymentEntryStatus {
-  """The Payment Type is active."""
-  active
 }
 
 """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
@@ -4415,7 +4500,7 @@ input SchemaPaymentTypeInput {
   payment: SchemaPaymentTypeDetailsInput!
 
   """The status of this Payment Type."""
-  status: SchemaPaymentEntryStatus!
+  status: SchemaPaymentTypeStatus!
 
   """
   The type of this Payment Type. This is a stable, unique identifier for it.
@@ -4425,6 +4510,12 @@ input SchemaPaymentTypeInput {
 
   """The version of the Payment Type."""
   typeVersion: Int!
+}
+
+"""The status of a Payment Type."""
+enum SchemaPaymentTypeStatus {
+  """The Payment Type is active."""
+  active
 }
 
 """EXPERIMENTAL: The Payment Types in your Schema."""

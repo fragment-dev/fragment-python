@@ -261,8 +261,8 @@ class LinkType(str, Enum):
 
 
 class PaymentStatus(str, Enum):
+    needs_payment_method = "needs_payment_method"
     processing = "processing"
-    requires_confirmation = "requires_confirmation"
     settled = "settled"
 
 
@@ -299,13 +299,13 @@ class SchemaLedgerEntryStatus(str, Enum):
     disabled = "disabled"
 
 
-class SchemaPaymentEntryStatus(str, Enum):
-    active = "active"
-
-
 class SchemaPaymentTypeDirection(str, Enum):
     payin = "payin"
     payout = "payout"
+
+
+class SchemaPaymentTypeStatus(str, Enum):
+    active = "active"
 
 
 class SchemaSystemLineKind(str, Enum):
