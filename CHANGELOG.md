@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 Releases prior to `1.0.0` were published before this changelog was added and
 are not documented here.
 
+## [1.3.0]
+
+### Added
+
+- `instantiateLedgerAccount` creates a Ledger Account from a template in the
+  Ledger's Schema before any Ledger Entry is posted to it, creating any missing
+  templated ancestors. Pass a `ledger`, a `path`, and optional `parameters`.
+- `getPayment` reads one Payment by `ik` and `ledgerIk`. It returns the
+  Payment's `amount`, `currency`, `status`, `type`, `typeVersion`, `mode`,
+  `parameters` and `created`.
+- `listPayments` pages through a Ledger's Payments with `first`, `after` and
+  `before`, and filters on `created` and `status` via `PaymentsFilterSet`.
+- Scenes can simulate Payments. `SceneInput` takes a `payments` list of
+  `ScenePaymentInput`, and a `SceneEventInput` with `event_type` of `payment`
+  references one by `ik` to post a lifecycle transition.
+- `PaymentStatus` has a new `approved` state.
+- `CurrencyCode` has a new `SLE` member.
+
+### Changed
+
+- `createPayment` now returns a `CreatePaymentResult` wrapping `payment`,
+  instead of returning the `Payment` directly.
+- `typeVersion` is now required on `createPayment`. It previously defaulted to
+  the latest active version.
+- `SchemaPaymentAccountingInput` now keys its Ledger Entries by `initiated` and
+  `settled`, instead of `needs_payment_method_to_processing` and
+  `processing_to_settled`.
+
 ## [1.2.0]
 
 ### Added
