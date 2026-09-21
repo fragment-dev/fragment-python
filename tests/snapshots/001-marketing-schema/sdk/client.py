@@ -27,6 +27,7 @@ from .get_ledger import GetLedger
 from .get_ledger_account_balance import GetLedgerAccountBalance
 from .get_ledger_account_lines import GetLedgerAccountLines
 from .get_ledger_entry import GetLedgerEntry
+from .get_payment import GetPayment
 from .get_schema import GetSchema
 from .get_workspace import GetWorkspace
 from .input_types import (
@@ -45,11 +46,13 @@ from .input_types import (
     LedgerLineInput,
     LedgerLinesFilterSet,
     LedgerMatchInput,
+    PaymentsFilterSet,
     SchemaInput,
     SchemaMatchInput,
     UpdateLedgerEntryInput,
     UpdateLedgerInput,
 )
+from .instantiate_ledger_account import InstantiateLedgerAccount
 from .list_ledger_account_balances import ListLedgerAccountBalances
 from .list_ledger_accounts import ListLedgerAccounts
 from .list_ledger_entries import ListLedgerEntries
@@ -57,6 +60,7 @@ from .list_ledger_entry_group_balances import ListLedgerEntryGroupBalances
 from .list_multi_currency_ledger_account_balances import (
     ListMultiCurrencyLedgerAccountBalances,
 )
+from .list_payments import ListPayments
 from .migrate_ledger_entry import MigrateLedgerEntry
 from .post_card_settle import PostCardSettle
 from .post_dispute_payout_initiate import PostDisputePayoutInitiate
@@ -980,6 +984,53 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return DeleteLedger.model_validate(data)
+
+    async def instantiate_ledger_account(
+        self,
+        ledger: LedgerMatchInput,
+        path: str,
+        parameters: Optional[Any] = None,
+        **kwargs: Any
+    ) -> InstantiateLedgerAccount:
+        query = gql("""
+            mutation instantiateLedgerAccount($ledger: LedgerMatchInput!, $path: String!, $parameters: Parameters) {
+              instantiateLedgerAccount(ledger: $ledger, path: $path, parameters: $parameters) {
+                __typename
+                ... on InstantiateLedgerAccountResult {
+                  ledgerAccount {
+                    id
+                    path
+                    name
+                    type
+                    created
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "ledger": ledger,
+            "path": path,
+            "parameters": parameters,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="instantiateLedgerAccount",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return InstantiateLedgerAccount.model_validate(data)
 
     async def add_ledger_entries(
         self,
@@ -2562,21 +2613,23 @@ class Client(AsyncFragmentClient):
         ik: Any,
         ledger_ik: Any,
         type_: Any,
-        type_version: Optional[int] = None,
+        type_version: int,
         parameters: Optional[Any] = None,
         **kwargs: Any
     ) -> CreatePayment:
         query = gql("""
-            mutation createPayment($ik: SafeString!, $ledgerIk: SafeString!, $type: SafeString!, $typeVersion: Int, $parameters: JSON) {
+            mutation createPayment($ik: SafeString!, $ledgerIk: SafeString!, $type: SafeString!, $typeVersion: Int!, $parameters: JSON) {
               createPayment(
                 ik: $ik
                 ledger: {ik: $ledgerIk}
                 payment: {type: $type, typeVersion: $typeVersion, parameters: $parameters}
               ) {
                 __typename
-                ... on Payment {
-                  clientSecret
-                  status
+                ... on CreatePaymentResult {
+                  payment {
+                    clientSecret
+                    status
+                  }
                 }
                 ... on BadRequestError {
                   code
@@ -2603,3 +2656,79 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return CreatePayment.model_validate(data)
+
+    async def get_payment(self, ik: Any, ledger_ik: Any, **kwargs: Any) -> GetPayment:
+        query = gql("""
+            query getPayment($ik: SafeString!, $ledgerIk: SafeString!) {
+              payment(payment: {ik: $ik, ledger: {ik: $ledgerIk}}) {
+                id
+                ik
+                amount
+                currency {
+                  code
+                  name
+                  precision
+                }
+                status
+                type
+                typeVersion
+                mode
+                parameters
+                created
+              }
+            }
+            """)
+        variables: dict[str, object] = {"ik": ik, "ledgerIk": ledger_ik}
+        response = await self.execute(
+            query=query, operation_name="getPayment", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return GetPayment.model_validate(data)
+
+    async def list_payments(
+        self,
+        ledger_ik: Any,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        before: Optional[str] = None,
+        filter_: Optional[PaymentsFilterSet] = None,
+        **kwargs: Any
+    ) -> ListPayments:
+        query = gql("""
+            query listPayments($ledgerIk: SafeString!, $after: String, $first: Int, $before: String, $filter: PaymentsFilterSet) {
+              ledger(ledger: {ik: $ledgerIk}) {
+                payments(after: $after, first: $first, before: $before, filter: $filter) {
+                  nodes {
+                    id
+                    ik
+                    amount
+                    currency {
+                      code
+                    }
+                    status
+                    type
+                    typeVersion
+                    created
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                    hasPreviousPage
+                    startCursor
+                  }
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "ledgerIk": ledger_ik,
+            "after": after,
+            "first": first,
+            "before": before,
+            "filter": filter_,
+        }
+        response = await self.execute(
+            query=query, operation_name="listPayments", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return ListPayments.model_validate(data)

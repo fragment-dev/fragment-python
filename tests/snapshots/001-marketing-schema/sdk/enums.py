@@ -149,6 +149,7 @@ class CurrencyCode(str, Enum):
     SEK = "SEK"
     SGD = "SGD"
     SHP = "SHP"
+    SLE = "SLE"
     SLL = "SLL"
     SOL = "SOL"
     SOS = "SOS"
@@ -260,7 +261,17 @@ class LinkType(str, Enum):
     UnitLink = "UnitLink"
 
 
+class PaymentCurrencyCode(str, Enum):
+    USD = "USD"
+
+
+class PaymentMode(str, Enum):
+    production = "production"
+    sandbox = "sandbox"
+
+
 class PaymentStatus(str, Enum):
+    approved = "approved"
     needs_payment_method = "needs_payment_method"
     processing = "processing"
     settled = "settled"
@@ -280,6 +291,7 @@ class ReadBalanceConsistencyMode(str, Enum):
 
 class SceneEventType(str, Enum):
     entry = "entry"
+    payment = "payment"
 
 
 class SchemaConsistencyMode(str, Enum):
@@ -297,6 +309,11 @@ class SchemaLedgerEntryStatus(str, Enum):
     active = "active"
     archived = "archived"
     disabled = "disabled"
+
+
+class SchemaPaymentAccountingEventKey(str, Enum):
+    initiated = "initiated"
+    settled = "settled"
 
 
 class SchemaPaymentTypeDirection(str, Enum):

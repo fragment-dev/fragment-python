@@ -331,13 +331,17 @@ input CreatePaymentInput {
   """
   type: SafeString!
 
-  """
-  The version of the Payment Type. Defaults to the latest active version.
-  """
-  typeVersion: Int
+  """The version of the Payment Type."""
+  typeVersion: Int!
 }
 
-union CreatePaymentResponse = BadRequestError | InternalError | Payment
+union CreatePaymentResponse = BadRequestError | CreatePaymentResult | InternalError
+
+"""EXPERIMENTAL: The created Payment."""
+type CreatePaymentResult {
+  """The Payment that was created."""
+  payment: Payment!
+}
 
 type Currency {
   """
@@ -526,6 +530,7 @@ enum CurrencyCode {
   SEK
   SGD
   SHP
+  SLE
   SLL
   SOL
   SOS
@@ -1029,6 +1034,13 @@ type IncreaseLink implements Link {
   name: String!
 }
 
+union InstantiateLedgerAccountResponse = BadRequestError | InstantiateLedgerAccountResult | InternalError
+
+type InstantiateLedgerAccountResult {
+  """The instantiated Ledger Account."""
+  ledgerAccount: LedgerAccount!
+}
+
 """
 A string representing integers up to 9,223,372,036,854,775,807 (i.e. 2^63-1)
 """
@@ -1189,7 +1201,7 @@ type Ledger {
     before: String
 
     """
-    Filter the Ledger Accounts returned. Learn more about [querying Ledger Accounts](https://fragment.dev/guides/query-data/ledger-accounts).
+    Filter the Ledger Accounts returned. Learn more about [querying Ledger Accounts](/guides/query-data#ledger-accounts).
     """
     filter: LedgerAccountsFilterSet
 
@@ -1349,6 +1361,32 @@ type Ledger {
   The name of the Ledger. Can be updated with the [updateLedger](/api-reference/api-mutations#updateledger) mutation.
   """
   name: String!
+
+  """EXPERIMENTAL: List the Payments on a Ledger, most recent first."""
+  payments(
+    """
+    Where to start paginating from, when paginating forwards. Send endCursor from a response to get its next page. Learn more about [pagination](https://fragment.dev/guides/query-data#basics-pagination).
+    """
+    after: String
+
+    """
+    Where to start paginating from, when paginating backwards. Send startCursor from a response to get the previous page. Learn more about [pagination](https://fragment.dev/guides/query-data#basics-pagination).
+    """
+    before: String
+
+    """Filter the Payments returned."""
+    filter: PaymentsFilterSet
+
+    """
+    The number of Payments to return per page, when paginating forwards. Defaults to 20, maximum is 200.
+    """
+    first: Int
+
+    """
+    The number of Payments to return per page, when paginating backwards. Defaults to 20, maximum is 200.
+    """
+    last: Int
+  ): PaymentsConnection!
 
   """Schema key associated with this Ledger."""
   schema: Schema
@@ -2002,12 +2040,12 @@ A set of conditions that a Ledger Account must meet for an operation to succeed.
 """
 input LedgerAccountConditionInput {
   """
-  A condition that the ownBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](https://fragment.dev/read-balances) for more on the different types of Ledger Account balances.
+  A condition that the ownBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](/guides/read-balances) for more on the different types of Ledger Account balances.
   """
   ownBalance: Int96ConditionInput
 
   """
-  A condition that the totalBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](https://fragment.dev/read-balances) for more on the different types of Ledger Account balances.
+  A condition that the totalBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](/guides/read-balances) for more on the different types of Ledger Account balances.
   """
   totalBalance: Int96ConditionInput
 }
@@ -2210,7 +2248,7 @@ input LedgerAccountMatchInput {
 
 """Payment configuration of a Ledger Account."""
 type LedgerAccountPayment {
-  penguin: Boolean!
+  enabled: Boolean!
 }
 
 input LedgerAccountTypeFilter {
@@ -2841,9 +2879,7 @@ input LedgerEntryInput {
   """
   type: String
 
-  """
-  Experimental: This field is reserved for an upcoming feature and is not yet supported.
-  """
+  """The version of the Ledger Entry type to post. Defaults to 1."""
   typeVersion: Int
 }
 
@@ -3222,44 +3258,6 @@ enum LedgerMigrationStatus {
   started
 }
 
-"""EXPERIMENTAL: A Payment posted to a Ledger."""
-type LedgerPayment {
-  """The amount of this Payment, in whole cents."""
-  amount: Int96!
-  created: DateTime!
-
-  """
-  The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) the Payment was created with.
-  """
-  ik: SafeString!
-
-  """The Ledger this Payment belongs to."""
-  ledgerId: SafeString!
-
-  """
-  Parameters the Payment was created with. Only returned by the `ledgerPayment` query.
-  """
-  parameters: JSON
-
-  """The status of this Payment."""
-  status: PaymentStatus!
-
-  """The Payment Type in the Schema this Payment was created from."""
-  type: SafeString!
-
-  """The version of the Payment Type."""
-  typeVersion: Int!
-}
-
-"""EXPERIMENTAL: A paginated list of Payments."""
-type LedgerPaymentsConnection {
-  """The current page of results."""
-  nodes: [LedgerPayment!]!
-
-  """The pagination info for this list."""
-  pageInfo: PageInfo!
-}
-
 input LedgerTypeFilter {
   equalTo: LedgerTypes
 
@@ -3368,7 +3366,7 @@ type Mutation {
   _empty: String
 
   """
-  Batch version of [addLedgerEntry](http://localhost:3001/api-reference/ledger-mutations#addledgerentry).
+  Batch version of [addLedgerEntry](/api-reference/ledger-mutations#addledgerentry).
   
   Adds a batch of Ledger Entries in one synchronous and atomic transaction. Either every entry is added or none are.
   """
@@ -3491,6 +3489,24 @@ type Mutation {
   deleteSchema(schema: SchemaMatchInput!): DeleteSchemaResponse!
 
   """
+  Instantiates a Ledger Account from a template in the Ledger's Schema before any Ledger Entry is posted to it. Creates any missing templated ancestors.
+  """
+  instantiateLedgerAccount(
+    """The Ledger whose Schema defines the account."""
+    ledger: LedgerMatchInput!
+
+    """
+    Values for every parameter the account's template references: name, currency, and linked account fields.
+    """
+    parameters: Parameters
+
+    """
+    The fully instantiated path of the account, e.g. assets/customer:cust-1. Must not contain placeholders.
+    """
+    path: String!
+  ): InstantiateLedgerAccountResponse!
+
+  """
   Migrate an existing Ledger Entry to a new type and typeVersion.
   
   Migrating a Ledger Entry will do the following:
@@ -3611,14 +3627,83 @@ scalar ParameterizedString
 """A mapping of parameter keys to values."""
 scalar Parameters
 
+"""EXPERIMENTAL: A Payment posted to a Ledger."""
 type Payment {
-  """
-  The secret handed to the payments SDK to render the payment method capture.
-  """
+  """The amount of this Payment, in whole cents."""
+  amount: Int96!
+
+  """The credential the payments SDK presents to `confirmPayment`."""
   clientSecret: String!
+  created: DateTime!
+
+  """The currency this Payment is denominated in."""
+  currency: PaymentCurrency!
+
+  """The ID of this Payment."""
+  id: ID!
+
+  """
+  The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) the Payment was created with.
+  """
+  ik: SafeString!
+
+  """The Ledger that this Payment belongs to."""
+  ledger: Ledger!
+
+  """The mode of this Payment. Can be `sandbox` or `production`."""
+  mode: PaymentMode!
+
+  """Parameters the Payment was created with."""
+  parameters: JSON!
 
   """The status of this Payment."""
   status: PaymentStatus!
+
+  """The Payment Type in the Schema this Payment was created from."""
+  type: SafeString!
+
+  """The version of the Payment Type."""
+  typeVersion: Int!
+}
+
+"""EXPERIMENTAL: The currency a Payment is denominated in."""
+type PaymentCurrency {
+  """The currency code."""
+  code: PaymentCurrencyCode!
+
+  """
+  A human readable name for the currency (e.g. United States Dollar). This is used for display purposes.
+  """
+  name: String!
+
+  """
+  The number of decimal places this currency goes to. For example, United States Dollars have a precision of 2 (i.e. 100 cents in a dollar), whereas the Jordanian Dinar has a precision of 3. This is used for display purposes.
+  """
+  precision: Int!
+}
+
+"""
+EXPERIMENTAL — subject to change.
+
+The currencies a Payment can be denominated in.
+"""
+enum PaymentCurrencyCode {
+  USD
+}
+
+"""Specify a Ledger Payment by using `ledger` and `ik`."""
+input PaymentMatchInput {
+  """The Idempotency Key the Payment was created with."""
+  ik: SafeString!
+
+  """The Ledger the Payment belongs to."""
+  ledger: LedgerMatchInput!
+}
+
+"""Mode of a Payment."""
+enum PaymentMode {
+  production
+  sandbox
 }
 
 """
@@ -3627,9 +3712,37 @@ EXPERIMENTAL — subject to change.
 Status of a Payment.
 """
 enum PaymentStatus {
+  approved
   needs_payment_method
   processing
   settled
+}
+
+"""EXPERIMENTAL: Filters a result set by Payment status."""
+input PaymentStatusFilter {
+  """Results must have the specified status."""
+  equalTo: PaymentStatus
+
+  """Results can have any of the specified statuses."""
+  in: [PaymentStatus!]
+}
+
+"""EXPERIMENTAL: A paginated list of Payments."""
+type PaymentsConnection {
+  """The current page of results."""
+  nodes: [Payment!]!
+
+  """The pagination info for this list."""
+  pageInfo: PageInfo!
+}
+
+"""EXPERIMENTAL: The filters that can be applied to a list of Payments."""
+input PaymentsFilterSet {
+  """Use this filter to filter Payments by their `created` timestamp."""
+  created: DateTimeFilter
+
+  """Use this to filter Payments by their status."""
+  status: PaymentStatusFilter
 }
 
 """
@@ -3745,41 +3858,6 @@ type Query {
     ledgerLine: LedgerLineMatchInput!
   ): LedgerLine
 
-  """EXPERIMENTAL: Get a single Payment by its Idempotency Key."""
-  ledgerPayment(
-    """The Idempotency Key the Payment was created with."""
-    ik: SafeString!
-
-    """The Ledger the Payment belongs to."""
-    ledger: LedgerMatchInput!
-  ): LedgerPayment
-
-  """EXPERIMENTAL: List the Payments on a Ledger, most recent first."""
-  ledgerPayments(
-    """
-    Where to start paginating from, when paginating forwards. Send endCursor from a response to get its next page.
-    """
-    after: String
-
-    """
-    Where to start paginating from, when paginating backwards. Send startCursor from a response to get the previous page.
-    """
-    before: String
-
-    """
-    The number of Payments to return per page, when paginating forwards. Defaults to 20, maximum is 200.
-    """
-    first: Int
-
-    """
-    The number of Payments to return per page, when paginating backwards. Defaults to 20, maximum is 200.
-    """
-    last: Int
-
-    """The Ledger to list Payments for."""
-    ledger: LedgerMatchInput!
-  ): LedgerPaymentsConnection!
-
   """
   Query Ledgers in workspace. Ledgers are paginated and returned in reverse-chronological order by their created date.
   """
@@ -3818,6 +3896,12 @@ type Query {
 
   """Get all links in a workspace"""
   links: LinksConnection!
+
+  """EXPERIMENTAL: Get a single Payment by its Idempotency Key."""
+  payment(
+    """The Ledger Payment to query."""
+    payment: PaymentMatchInput!
+  ): Payment
 
   """Get a Schema by key."""
   schema(
@@ -3931,23 +4015,73 @@ input SceneEntryInput {
 }
 
 input SceneEventInput {
-  """The simulated Ledger Entry."""
-  entry: SceneEntryInput!
+  """The simulated Ledger Entry. Required when eventType is `entry`."""
+  entry: SceneEntryInput
 
-  """The type of the Scene Event. Currently, only entries are supported."""
+  """The type of the Scene Event."""
   eventType: SceneEventType!
+
+  """
+  EXPERIMENTAL: The simulated Payment lifecycle transition. Required when eventType is `payment`.
+  """
+  payment: ScenePaymentEventInput
 }
 
+"""The kind of thing a Scene Event simulates."""
 enum SceneEventType {
+  """A simulated Ledger Entry."""
   entry
+
+  """EXPERIMENTAL: One lifecycle transition of a simulated Payment."""
+  payment
 }
 
 input SceneInput {
-  """A list of simulated ledger entries that make up the Scene."""
+  """The ordered simulated events that make up the Scene."""
   events: [SceneEventInput!]!
 
   """The human-readable name of the Scene."""
   name: String!
+
+  """
+  EXPERIMENTAL: The simulated Payments the Scene's payment events reference.
+  """
+  payments: [ScenePaymentInput!]
+}
+
+"""
+EXPERIMENTAL: One lifecycle transition of a simulated Payment, posted as a
+part of a Scene.
+"""
+input ScenePaymentEventInput {
+  """The lifecycle transition this Scene Event posts."""
+  event: SchemaPaymentAccountingEventKey!
+
+  """
+  The Idempotency Key of the simulated Payment, as declared in scene.payments.
+  """
+  ik: SafeString!
+}
+
+"""
+EXPERIMENTAL: A simulated Payment declared by a Scene. Its lifecycle events
+reference it by `ik`, so one simulated Payment has exactly one set of
+parameters.
+"""
+input ScenePaymentInput {
+  """The Idempotency Key of the simulated Payment. Unique within the Scene."""
+  ik: SafeString!
+
+  """Any parameters to be used as inputs to this simulated Payment."""
+  parameters: JSON
+
+  """
+  The type of the simulated Payment. Must match one of the types provided in schema.payments.types.
+  """
+  type: SafeString!
+
+  """The version of the Payment Type."""
+  typeVersion: Int
 }
 
 type Schema {
@@ -4407,16 +4541,25 @@ input SchemaMatchInput {
   version: Int
 }
 
+"""EXPERIMENTAL: A lifecycle transition of a Payment."""
+enum SchemaPaymentAccountingEventKey {
+  """The payment was approved and is guaranteed to settle."""
+  initiated
+
+  """The payment settled."""
+  settled
+}
+
 """
 EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
 through its lifecycle, keyed by lifecycle transition.
 """
 input SchemaPaymentAccountingInput {
-  """Posted when the payment enters processing. Optional."""
-  needs_payment_method_to_processing: SchemaPaymentEntryInput
+  """Posted when the payment is approved. Optional."""
+  initiated: SchemaPaymentEntryInput
 
   """Posted when the payment settles. Every Payment Type must define it."""
-  processing_to_settled: SchemaPaymentEntryInput!
+  settled: SchemaPaymentEntryInput!
 }
 
 """
@@ -4432,7 +4575,7 @@ input SchemaPaymentEntryInput {
 
 """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
 input SchemaPaymentInput {
-  penguin: Boolean!
+  enabled: Boolean!
 }
 
 """EXPERIMENTAL: A Ledger Line in a payment entry."""

@@ -16,11 +16,13 @@ from .enums import (
     LedgerLinesConsistencyMode,
     LedgerTypes,
     LinkType,
+    PaymentStatus,
     PostLinesAs,
     SceneEventType,
     SchemaConsistencyMode,
     SchemaLedgerAccountStatus,
     SchemaLedgerEntryStatus,
+    SchemaPaymentAccountingEventKey,
     SchemaPaymentTypeDirection,
     SchemaPaymentTypeStatus,
     SchemaSystemLineKind,
@@ -127,8 +129,8 @@ class CreatePaymentInput(BaseModel):
     "Parameters for the specific Payment Type. Must be a key-value pair of strings. Must be a flat object: nested objects and arrays are rejected."
     type_: Any = Field(alias="type")
     "The type of the Payment. Must be defined in the Schema linked to the Ledger."
-    type_version: Optional[int] = Field(alias="typeVersion", default=None)
-    "The version of the Payment Type. Defaults to the latest active version."
+    type_version: int = Field(alias="typeVersion")
+    "The version of the Payment Type."
 
 
 class CurrencyFilter(BaseModel):
@@ -318,11 +320,11 @@ class LedgerAccountConditionInput(BaseModel):
     own_balance: Optional["Int96ConditionInput"] = Field(
         alias="ownBalance", default=None
     )
-    "A condition that the ownBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](https://fragment.dev/read-balances) for more on the different types of Ledger Account balances."
+    "A condition that the ownBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](/guides/read-balances) for more on the different types of Ledger Account balances."
     total_balance: Optional["Int96ConditionInput"] = Field(
         alias="totalBalance", default=None
     )
-    "A condition that the totalBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](https://fragment.dev/read-balances) for more on the different types of Ledger Account balances."
+    "A condition that the totalBalance field must satisfy. Note that this condition always applies to the latest balance, not to balances at a specific date or time. See [Read balances](/guides/read-balances) for more on the different types of Ledger Account balances."
 
 
 class LedgerAccountConsistencyConfigInput(BaseModel):
@@ -545,7 +547,7 @@ class LedgerEntryInput(BaseModel):
     type_: Optional[str] = Field(alias="type", default=None)
     "The type of the Ledger Entry. Must be defined in the Schema linked to the Ledger specified below."
     type_version: Optional[int] = Field(alias="typeVersion", default=None)
-    "Experimental: This field is reserved for an upcoming feature and is not yet supported."
+    "The version of the Ledger Entry type to post. Defaults to 1."
 
 
 class LedgerEntryMatchInput(BaseModel):
@@ -658,6 +660,33 @@ class MigrateLedgerEntryInput(BaseModel):
     "The Ledger Entry you want to migrate it to"
 
 
+class PaymentMatchInput(BaseModel):
+    """Specify a Ledger Payment by using `ledger` and `ik`."""
+
+    ik: Any
+    "The Idempotency Key the Payment was created with."
+    ledger: "LedgerMatchInput"
+    "The Ledger the Payment belongs to."
+
+
+class PaymentStatusFilter(BaseModel):
+    """EXPERIMENTAL: Filters a result set by Payment status."""
+
+    equal_to: Optional[PaymentStatus] = Field(alias="equalTo", default=None)
+    "Results must have the specified status."
+    in_: Optional[list[PaymentStatus]] = Field(alias="in", default=None)
+    "Results can have any of the specified statuses."
+
+
+class PaymentsFilterSet(BaseModel):
+    """EXPERIMENTAL: The filters that can be applied to a list of Payments."""
+
+    created: Optional["DateTimeFilter"] = None
+    "Use this filter to filter Payments by their `created` timestamp."
+    status: Optional["PaymentStatusFilter"] = None
+    "Use this to filter Payments by their status."
+
+
 class SceneEntryInput(BaseModel):
     """A simulated Ledger Entry posted as a part of a Scene."""
 
@@ -670,17 +699,46 @@ class SceneEntryInput(BaseModel):
 
 
 class SceneEventInput(BaseModel):
-    entry: "SceneEntryInput"
-    "The simulated Ledger Entry."
+    entry: Optional["SceneEntryInput"] = None
+    "The simulated Ledger Entry. Required when eventType is `entry`."
     event_type: SceneEventType = Field(alias="eventType")
-    "The type of the Scene Event. Currently, only entries are supported."
+    "The type of the Scene Event."
+    payment: Optional["ScenePaymentEventInput"] = None
+    "EXPERIMENTAL: The simulated Payment lifecycle transition. Required when eventType is `payment`."
 
 
 class SceneInput(BaseModel):
     events: list["SceneEventInput"]
-    "A list of simulated ledger entries that make up the Scene."
+    "The ordered simulated events that make up the Scene."
     name: str
     "The human-readable name of the Scene."
+    payments: Optional[list["ScenePaymentInput"]] = None
+    "EXPERIMENTAL: The simulated Payments the Scene's payment events reference."
+
+
+class ScenePaymentEventInput(BaseModel):
+    """EXPERIMENTAL: One lifecycle transition of a simulated Payment, posted as a
+    part of a Scene."""
+
+    event: SchemaPaymentAccountingEventKey
+    "The lifecycle transition this Scene Event posts."
+    ik: Any
+    "The Idempotency Key of the simulated Payment, as declared in scene.payments."
+
+
+class ScenePaymentInput(BaseModel):
+    """EXPERIMENTAL: A simulated Payment declared by a Scene. Its lifecycle events
+    reference it by `ik`, so one simulated Payment has exactly one set of
+    parameters."""
+
+    ik: Any
+    "The Idempotency Key of the simulated Payment. Unique within the Scene."
+    parameters: Optional[Any] = None
+    "Any parameters to be used as inputs to this simulated Payment."
+    type_: Any = Field(alias="type")
+    "The type of the simulated Payment. Must match one of the types provided in schema.payments.types."
+    type_version: Optional[int] = Field(alias="typeVersion", default=None)
+    "The version of the Payment Type."
 
 
 class SchemaConditionInput(BaseModel):
@@ -906,9 +964,9 @@ class SchemaPaymentAccountingInput(BaseModel):
     """EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
     through its lifecycle, keyed by lifecycle transition."""
 
-    needs_payment_method_to_processing: Optional["SchemaPaymentEntryInput"] = None
-    "Posted when the payment enters processing. Optional."
-    processing_to_settled: "SchemaPaymentEntryInput"
+    initiated: Optional["SchemaPaymentEntryInput"] = None
+    "Posted when the payment is approved. Optional."
+    settled: "SchemaPaymentEntryInput"
     "Posted when the payment settles. Every Payment Type must define it."
 
 
@@ -924,7 +982,7 @@ class SchemaPaymentEntryInput(BaseModel):
 class SchemaPaymentInput(BaseModel):
     """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
 
-    penguin: bool
+    enabled: bool
 
 
 class SchemaPaymentLineInput(BaseModel):
@@ -1146,6 +1204,8 @@ LedgerLineInput.model_rebuild()
 LedgerLinesFilterSet.model_rebuild()
 LedgersFilterSet.model_rebuild()
 MigrateLedgerEntryInput.model_rebuild()
+PaymentMatchInput.model_rebuild()
+PaymentsFilterSet.model_rebuild()
 SceneEventInput.model_rebuild()
 SceneInput.model_rebuild()
 SchemaConditionInput.model_rebuild()

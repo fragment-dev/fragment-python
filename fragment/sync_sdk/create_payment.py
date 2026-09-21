@@ -12,8 +12,8 @@ from .enums import PaymentStatus
 class CreatePayment(BaseModel):
     create_payment: Union[
         "CreatePaymentCreatePaymentBadRequestError",
+        "CreatePaymentCreatePaymentCreatePaymentResult",
         "CreatePaymentCreatePaymentInternalError",
-        "CreatePaymentCreatePaymentPayment",
     ] = Field(alias="createPayment", discriminator="typename__")
 
 
@@ -24,6 +24,16 @@ class CreatePaymentCreatePaymentBadRequestError(BaseModel):
     retryable: bool
 
 
+class CreatePaymentCreatePaymentCreatePaymentResult(BaseModel):
+    typename__: Literal["CreatePaymentResult"] = Field(alias="__typename")
+    payment: "CreatePaymentCreatePaymentCreatePaymentResultPayment"
+
+
+class CreatePaymentCreatePaymentCreatePaymentResultPayment(BaseModel):
+    client_secret: str = Field(alias="clientSecret")
+    status: PaymentStatus
+
+
 class CreatePaymentCreatePaymentInternalError(BaseModel):
     typename__: Literal["InternalError"] = Field(alias="__typename")
     code: str
@@ -31,10 +41,5 @@ class CreatePaymentCreatePaymentInternalError(BaseModel):
     retryable: bool
 
 
-class CreatePaymentCreatePaymentPayment(BaseModel):
-    typename__: Literal["Payment"] = Field(alias="__typename")
-    client_secret: str = Field(alias="clientSecret")
-    status: PaymentStatus
-
-
 CreatePayment.model_rebuild()
+CreatePaymentCreatePaymentCreatePaymentResult.model_rebuild()
