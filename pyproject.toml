@@ -27,8 +27,8 @@ pylint = "^3.2.6"
 black = "^26.3.1"
 isort = "^5.13.2"
 mypy = "^1.11.2"
-pytest = "^8.3.2"
-pytest-asyncio = "^0.24.0"
+pytest = "^9.0.3"
+pytest-asyncio = "^1.4.0"
 
 [build-system]
 requires = ["poetry-core"]
