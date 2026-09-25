@@ -3158,6 +3158,11 @@ input LedgerLinesFilterSet {
   date: DateFilter
 
   """
+  Filter Ledger Lines by the external IDs of their linked transactions. Only supported on `LedgerAccount.lines` for a linked Ledger Account.
+  """
+  externalTxIds: [String!]
+
+  """
   Use this to filter Ledger Lines that were posted to this Ledger Account, using `reverseLedgerEntry`.
   """
   isReversal: Boolean
@@ -3302,8 +3307,14 @@ interface Link {
   name: String!
 }
 
+"""Specify a Link by ID, or a Custom Link by its creation IK."""
 input LinkMatchInput {
-  id: ID!
+  id: ID
+
+  """
+  The IK passed to createCustomLink. If id is also provided, both must identify the same Link.
+  """
+  ik: SafeString
 }
 
 """The type of Link an external account belongs to."""
@@ -3548,7 +3559,7 @@ type Mutation {
     """A list of external accounts to sync"""
     accounts: [CustomAccountInput!]!
 
-    """An object containing the ID of a Custom Link."""
+    """An object containing the ID or creation IK of a Custom Link."""
     link: LinkMatchInput!
   ): SyncCustomAccountsResponse!
 
@@ -3556,7 +3567,7 @@ type Mutation {
   You can create transactions under a Custom Account in a [Custom Link](https://fragment.dev/guides/sync-payments#custom-link) using this mutation. Once you've imported transactions, you can use the reconcileTx mutation to add them to a Ledger via the Linked Ledger Account. You can sync up to 100 Custom Transactions in one API call.
   """
   syncCustomTxs(
-    """An object containing the ID of a Custom Link."""
+    """An object containing the ID or creation IK of a Custom Link."""
     link: LinkMatchInput!
 
     """A list of external transactions to sync"""
@@ -3639,6 +3650,11 @@ type Payment {
   """The currency this Payment is denominated in."""
   currency: PaymentCurrency!
 
+  """
+  EXPERIMENTAL: The log of events that have occurred on this Payment, most recent first.
+  """
+  events: PaymentEventsConnection!
+
   """The ID of this Payment."""
   id: ID!
 
@@ -3666,6 +3682,38 @@ type Payment {
   typeVersion: Int!
 }
 
+"""EXPERIMENTAL: The card network captured the Payment."""
+type PaymentCardCapturedEvent implements PaymentEvent {
+  """
+  The `initiated` Ledger Entry, `null` where the Payment Type defines none.
+  """
+  ledgerEntry: LedgerEntry
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus!
+}
+
+"""EXPERIMENTAL: The payer completed checkout."""
+type PaymentCheckoutCompletedEvent implements PaymentEvent {
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus!
+}
+
+"""EXPERIMENTAL: The Payment was created."""
+type PaymentCreatedEvent implements PaymentEvent {
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus!
+}
+
 """EXPERIMENTAL: The currency a Payment is denominated in."""
 type PaymentCurrency {
   """The currency code."""
@@ -3691,6 +3739,24 @@ enum PaymentCurrencyCode {
   USD
 }
 
+"""EXPERIMENTAL: Something that happened to a Payment."""
+interface PaymentEvent {
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus!
+}
+
+"""EXPERIMENTAL: A paginated list of Payment events."""
+type PaymentEventsConnection {
+  """The current page of results."""
+  nodes: [PaymentEvent!]!
+
+  """The pagination info for this list."""
+  pageInfo: PageInfo!
+}
+
 """Specify a Ledger Payment by using `ledger` and `ik`."""
 input PaymentMatchInput {
   """The Idempotency Key the Payment was created with."""
@@ -3706,13 +3772,25 @@ enum PaymentMode {
   sandbox
 }
 
+"""EXPERIMENTAL: The Payment settled."""
+type PaymentSettledEvent implements PaymentEvent {
+  """The `settled` Ledger Entry."""
+  ledgerEntry: LedgerEntry!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus!
+}
+
 """
 EXPERIMENTAL — subject to change.
 
 Status of a Payment.
 """
 enum PaymentStatus {
-  approved
+  accepted
   needs_payment_method
   processing
   settled
@@ -3888,9 +3966,13 @@ type Query {
     last: Int
   ): LedgersConnection!
 
-  """Get a Link by ID. Returns a BadRequestError if the Link is not found."""
+  """
+  Get a Link by ID or a Custom Link by creation IK. Returns a BadRequestError if the Link is not found.
+  """
   link(
-    """An object containing the ID of the Link you are querying"""
+    """
+    An object containing the ID or creation IK of the Link you are querying
+    """
     link: LinkMatchInput!
   ): Link
 
@@ -4543,7 +4625,7 @@ input SchemaMatchInput {
 
 """EXPERIMENTAL: A lifecycle transition of a Payment."""
 enum SchemaPaymentAccountingEventKey {
-  """The payment was approved and is guaranteed to settle."""
+  """The payment was captured and is guaranteed to settle."""
   initiated
 
   """The payment settled."""
@@ -4555,7 +4637,7 @@ EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
 through its lifecycle, keyed by lifecycle transition.
 """
 input SchemaPaymentAccountingInput {
-  """Posted when the payment is approved. Optional."""
+  """Posted when the payment is captured. Optional."""
   initiated: SchemaPaymentEntryInput
 
   """Posted when the payment settles. Every Payment Type must define it."""
