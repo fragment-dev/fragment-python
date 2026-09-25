@@ -2627,8 +2627,15 @@ class Client(AsyncFragmentClient):
                 __typename
                 ... on CreatePaymentResult {
                   payment {
+                    id
+                    ik
                     clientSecret
                     status
+                    amount
+                    mode
+                    currency {
+                      code
+                    }
                   }
                 }
                 ... on BadRequestError {

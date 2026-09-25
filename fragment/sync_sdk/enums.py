@@ -271,7 +271,7 @@ class PaymentMode(str, Enum):
 
 
 class PaymentStatus(str, Enum):
-    approved = "approved"
+    accepted = "accepted"
     needs_payment_method = "needs_payment_method"
     processing = "processing"
     settled = "settled"

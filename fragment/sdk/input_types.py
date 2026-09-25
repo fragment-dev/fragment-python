@@ -606,6 +606,8 @@ class LedgerLinesFilterSet(BaseModel):
     "Filter by the currency of the Ledger Line."
     date: Optional["DateFilter"] = None
     "Use this filter to filter Ledger Lines by their `posted` date."
+    external_tx_ids: Optional[list[str]] = Field(alias="externalTxIds", default=None)
+    "Filter Ledger Lines by the external IDs of their linked transactions. Only supported on `LedgerAccount.lines` for a linked Ledger Account."
     is_reversal: Optional[bool] = Field(alias="isReversal", default=None)
     "Use this to filter Ledger Lines that were posted to this Ledger Account, using `reverseLedgerEntry`."
     is_reversed: Optional[bool] = Field(alias="isReversed", default=None)
@@ -648,7 +650,11 @@ class LedgersFilterSet(BaseModel):
 
 
 class LinkMatchInput(BaseModel):
-    id: str
+    """Specify a Link by ID, or a Custom Link by its creation IK."""
+
+    id: Optional[str] = None
+    ik: Optional[Any] = None
+    "The IK passed to createCustomLink. If id is also provided, both must identify the same Link."
 
 
 class MigrateLedgerEntryInput(BaseModel):
@@ -965,7 +971,7 @@ class SchemaPaymentAccountingInput(BaseModel):
     through its lifecycle, keyed by lifecycle transition."""
 
     initiated: Optional["SchemaPaymentEntryInput"] = None
-    "Posted when the payment is approved. Optional."
+    "Posted when the payment is captured. Optional."
     settled: "SchemaPaymentEntryInput"
     "Posted when the payment settles. Every Payment Type must define it."
 

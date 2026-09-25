@@ -59,6 +59,7 @@ from .create_payment import (
     CreatePaymentCreatePaymentBadRequestError,
     CreatePaymentCreatePaymentCreatePaymentResult,
     CreatePaymentCreatePaymentCreatePaymentResultPayment,
+    CreatePaymentCreatePaymentCreatePaymentResultPaymentCurrency,
     CreatePaymentCreatePaymentInternalError,
 )
 from .delete_custom_txs import (
@@ -497,6 +498,7 @@ __all__ = [
     "CreatePaymentCreatePaymentBadRequestError",
     "CreatePaymentCreatePaymentCreatePaymentResult",
     "CreatePaymentCreatePaymentCreatePaymentResultPayment",
+    "CreatePaymentCreatePaymentCreatePaymentResultPaymentCurrency",
     "CreatePaymentCreatePaymentInternalError",
     "CreatePaymentInput",
     "CurrencyCode",
