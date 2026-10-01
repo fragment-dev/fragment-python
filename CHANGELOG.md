@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 Releases prior to `1.0.0` were published before this changelog was added and
 are not documented here.
 
+## [Unreleased]
+
+### Removed
+
+- `authlib` is no longer a dependency. The SDK only used it to fetch its access
+  token, so it now makes that client-credentials request with `httpx`. This
+  drops authlib (and `joserfc`) from your dependency tree, including
+  CVE-2026-96760, which the SDK's code path never reached.
+- `AsyncFragmentClient.oauth2_client` and `SyncFragmentClient.oauth2_client` are
+  gone along with authlib.
+
+### Changed
+
+- A failed token request now raises `fragment.exceptions.TokenRequestException`
+  (with `.error` and `.description`) instead of authlib's `OAuthError`. Server
+  errors from the token endpoint still raise `httpx.HTTPStatusError`.
+
 ## [1.4.0]
 
 ### Added

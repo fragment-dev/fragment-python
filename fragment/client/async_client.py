@@ -1,5 +1,3 @@
-# Ignore untyped authlib
-# mypy: disable-error-code="import-untyped"
 import time
 from typing import Any, Dict, Optional
 
@@ -7,8 +5,8 @@ import httpx
 from ariadne_codegen.client_generators.dependencies.async_base_client import (
     AsyncBaseClient,
 )
-from authlib.integrations.httpx_client import AsyncOAuth2Client
 
+from fragment.client.oauth import fetch_token_async
 from fragment.exceptions import MissingArgumentException, MissingTokenException
 
 
@@ -37,16 +35,18 @@ class AsyncFragmentClient(AsyncBaseClient):
         self.auth_url = auth_url
         self.expiration_time: Optional[float] = None
         self.token: Optional[Dict[str, Any]] = None
-        self.oauth2_client = AsyncOAuth2Client(
-            client_id, client_secret, scope=auth_scope
-        )
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.auth_scope = auth_scope
 
     async def refresh_token(self) -> None:
         now = time.time()
         if self.expiration_time is None or self.expiration_time <= now:
             # Held in a local because `self.token` is declared `dict | None`,
             # so reading the attribute back is not narrowed by the assignment.
-            token = await self.oauth2_client.fetch_token(self.auth_url)
+            token = await fetch_token_async(
+                self.auth_url, self.client_id, self.client_secret, self.auth_scope
+            )
             self.token = token
             self.expiration_time = now + token["expires_in"]
 
