@@ -53,3 +53,16 @@ def test_the_wheel_ships_both_sdks(wheel: Path) -> None:
         names = set(archive.namelist())
     assert "fragment/sdk/typed_entries.py" in names
     assert "fragment/sync_sdk/typed_entries.py" in names
+
+
+def test_the_wheel_does_not_depend_on_authlib(wheel: Path) -> None:
+    """The SDK fetches its token with httpx; authlib was dropped so customers
+    stop inheriting its JOSE/OIDC advisories. Guards against it creeping back."""
+    with zipfile.ZipFile(wheel) as archive:
+        (metadata,) = [n for n in archive.namelist() if n.endswith("/METADATA")]
+        requires = [
+            line
+            for line in archive.read(metadata).decode().splitlines()
+            if line.startswith("Requires-Dist:")
+        ]
+    assert not any("authlib" in line.lower() for line in requires), requires
