@@ -167,5 +167,5 @@ async def print_schema_name():
 
 import asyncio
 loop = asyncio.get_event_loop()
-loop.run_until_complete(print_schema())
+loop.run_until_complete(print_schema_name())
 ```
