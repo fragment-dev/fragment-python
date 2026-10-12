@@ -74,7 +74,7 @@ To [post](https://fragment.dev/guides/post-ledger-entries#post-to-the-api) a Led
 await graphql_client.add_ledger_entry(
   ik="some-ik",
   ledger_ik="your-ledger-ik",
-  type="user_funds_account",
+  type_="user_funds_account",
   posted="1968-01-01T16:45:00Z",
   parameters=dict(
     user_id="user-1",
