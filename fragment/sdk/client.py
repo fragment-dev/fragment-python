@@ -11,8 +11,10 @@ from .create_custom_currency import CreateCustomCurrency
 from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
 from .create_payment import CreatePayment
+from .create_payment_method_setup import CreatePaymentMethodSetup
 from .delete_custom_txs import DeleteCustomTxs
 from .delete_ledger import DeleteLedger
+from .delete_payment_method import DeletePaymentMethod
 from .delete_schema import DeleteSchema
 from .enums import ReadBalanceConsistencyMode
 from .get_account_data_migrations import GetAccountDataMigrations
@@ -28,6 +30,8 @@ from .get_ledger_account_balance import GetLedgerAccountBalance
 from .get_ledger_account_lines import GetLedgerAccountLines
 from .get_ledger_entry import GetLedgerEntry
 from .get_payment import GetPayment
+from .get_payment_method import GetPaymentMethod
+from .get_payment_method_setup import GetPaymentMethodSetup
 from .get_schema import GetSchema
 from .get_workspace import GetWorkspace
 from .input_types import (
@@ -46,6 +50,7 @@ from .input_types import (
     LedgerLineInput,
     LedgerLinesFilterSet,
     LedgerMatchInput,
+    PaymentMethodMatchInput,
     PaymentsFilterSet,
     SchemaInput,
     SchemaMatchInput,
@@ -60,6 +65,7 @@ from .list_ledger_entry_group_balances import ListLedgerEntryGroupBalances
 from .list_multi_currency_ledger_account_balances import (
     ListMultiCurrencyLedgerAccountBalances,
 )
+from .list_payment_methods import ListPaymentMethods
 from .list_payments import ListPayments
 from .migrate_ledger_entry import MigrateLedgerEntry
 from .reconcile_tx import ReconcileTx
@@ -67,7 +73,9 @@ from .reconcile_tx_runtime import ReconcileTxRuntime
 from .reverse_ledger_entry import ReverseLedgerEntry
 from .store_schema import StoreSchema
 from .sync_custom_accounts import SyncCustomAccounts
+from .sync_custom_accounts_by_link_ik import SyncCustomAccountsByLinkIk
 from .sync_custom_txs import SyncCustomTxs
+from .sync_custom_txs_by_link_ik import SyncCustomTxsByLinkIk
 from .typed_entries import TypedLedgerEntry
 from .update_ledger import UpdateLedger
 from .update_ledger_entry import UpdateLedgerEntry
@@ -959,6 +967,89 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return SyncCustomTxs.model_validate(data)
 
+    async def sync_custom_accounts_by_link_ik(
+        self, link_ik: Any, accounts: list[CustomAccountInput], **kwargs: Any
+    ) -> SyncCustomAccountsByLinkIk:
+        query = gql("""
+            mutation syncCustomAccountsByLinkIk($linkIk: SafeString!, $accounts: [CustomAccountInput!]!) {
+              syncCustomAccounts(link: {ik: $linkIk}, accounts: $accounts) {
+                __typename
+                ... on SyncCustomAccountsResult {
+                  accounts {
+                    id
+                    externalId
+                    name
+                    currency {
+                      code
+                      customCurrencyId
+                    }
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"linkIk": link_ik, "accounts": accounts}
+        response = await self.execute(
+            query=query,
+            operation_name="syncCustomAccountsByLinkIk",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return SyncCustomAccountsByLinkIk.model_validate(data)
+
+    async def sync_custom_txs_by_link_ik(
+        self, link_ik: Any, txs: list[CustomTxInput], **kwargs: Any
+    ) -> SyncCustomTxsByLinkIk:
+        query = gql("""
+            mutation syncCustomTxsByLinkIk($linkIk: SafeString!, $txs: [CustomTxInput!]!) {
+              syncCustomTxs(link: {ik: $linkIk}, txs: $txs) {
+                __typename
+                ... on SyncCustomTxsResult {
+                  txs {
+                    __typename
+                    linkId
+                    id
+                    externalId
+                    externalAccountId
+                    amount
+                    description
+                    posted
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"linkIk": link_ik, "txs": txs}
+        response = await self.execute(
+            query=query,
+            operation_name="syncCustomTxsByLinkIk",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return SyncCustomTxsByLinkIk.model_validate(data)
+
     async def delete_custom_txs(self, txs: list[str], **kwargs: Any) -> DeleteCustomTxs:
         query = gql("""
             mutation deleteCustomTxs($txs: [ID!]!) {
@@ -1846,14 +1937,15 @@ class Client(AsyncFragmentClient):
         type_: Any,
         type_version: int,
         parameters: Optional[Any] = None,
+        payment_method: Optional[PaymentMethodMatchInput] = None,
         **kwargs: Any
     ) -> CreatePayment:
         query = gql("""
-            mutation createPayment($ik: SafeString!, $ledgerIk: SafeString!, $type: SafeString!, $typeVersion: Int!, $parameters: JSON) {
+            mutation createPayment($ik: SafeString!, $ledgerIk: SafeString!, $type: SafeString!, $typeVersion: Int!, $parameters: JSON, $paymentMethod: PaymentMethodMatchInput) {
               createPayment(
                 ik: $ik
                 ledger: {ik: $ledgerIk}
-                payment: {type: $type, typeVersion: $typeVersion, parameters: $parameters}
+                payment: {type: $type, typeVersion: $typeVersion, parameters: $parameters, paymentMethod: $paymentMethod}
               ) {
                 __typename
                 ... on CreatePaymentResult {
@@ -1888,6 +1980,7 @@ class Client(AsyncFragmentClient):
             "type": type_,
             "typeVersion": type_version,
             "parameters": parameters,
+            "paymentMethod": payment_method,
         }
         response = await self.execute(
             query=query, operation_name="createPayment", variables=variables, **kwargs
@@ -1970,3 +2063,216 @@ class Client(AsyncFragmentClient):
         )
         data = self.get_data(response)
         return ListPayments.model_validate(data)
+
+    async def list_payment_methods(
+        self,
+        email: str,
+        ledger_ik: Any,
+        after: Optional[str] = None,
+        first: Optional[int] = None,
+        before: Optional[str] = None,
+        last: Optional[int] = None,
+        **kwargs: Any
+    ) -> ListPaymentMethods:
+        query = gql("""
+            query listPaymentMethods($email: String!, $ledgerIk: SafeString!, $after: String, $first: Int, $before: String, $last: Int) {
+              paymentMethods(
+                filter: {user: {email: {equalTo: $email}, ledger: {ik: $ledgerIk}}}
+                after: $after
+                first: $first
+                before: $before
+                last: $last
+              ) {
+                nodes {
+                  __typename
+                  id
+                  created
+                  ... on CardPaymentMethod {
+                    brand
+                    last4
+                    expiryMonth
+                    expiryYear
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                  hasPreviousPage
+                  startCursor
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "email": email,
+            "ledgerIk": ledger_ik,
+            "after": after,
+            "first": first,
+            "before": before,
+            "last": last,
+        }
+        response = await self.execute(
+            query=query,
+            operation_name="listPaymentMethods",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return ListPaymentMethods.model_validate(data)
+
+    async def get_payment_method(self, id: str, **kwargs: Any) -> GetPaymentMethod:
+        query = gql("""
+            query getPaymentMethod($id: ID!) {
+              paymentMethod(paymentMethod: {id: $id}) {
+                __typename
+                id
+                created
+                ... on CardPaymentMethod {
+                  brand
+                  last4
+                  expiryMonth
+                  expiryYear
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"id": id}
+        response = await self.execute(
+            query=query,
+            operation_name="getPaymentMethod",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetPaymentMethod.model_validate(data)
+
+    async def delete_payment_method(
+        self, id: str, **kwargs: Any
+    ) -> DeletePaymentMethod:
+        query = gql("""
+            mutation deletePaymentMethod($id: ID!) {
+              deletePaymentMethod(paymentMethod: {id: $id}) {
+                __typename
+                ... on DeletePaymentMethodResult {
+                  success
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"id": id}
+        response = await self.execute(
+            query=query,
+            operation_name="deletePaymentMethod",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return DeletePaymentMethod.model_validate(data)
+
+    async def create_payment_method_setup(
+        self, ik: Any, ledger_ik: Any, email: str, **kwargs: Any
+    ) -> CreatePaymentMethodSetup:
+        query = gql("""
+            mutation createPaymentMethodSetup($ik: SafeString!, $ledgerIk: SafeString!, $email: String!) {
+              createPaymentMethodSetup(
+                ik: $ik
+                ledger: {ik: $ledgerIk}
+                user: {email: $email}
+              ) {
+                __typename
+                ... on CreatePaymentMethodSetupResult {
+                  paymentMethodSetup {
+                    id
+                    ik
+                    clientSecret
+                    status
+                    mode
+                    created
+                    currency {
+                      code
+                    }
+                    paymentMethod {
+                      __typename
+                      id
+                      created
+                      ... on CardPaymentMethod {
+                        brand
+                        last4
+                        expiryMonth
+                        expiryYear
+                      }
+                    }
+                  }
+                  isIkReplay
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"ik": ik, "ledgerIk": ledger_ik, "email": email}
+        response = await self.execute(
+            query=query,
+            operation_name="createPaymentMethodSetup",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return CreatePaymentMethodSetup.model_validate(data)
+
+    async def get_payment_method_setup(
+        self, ik: Any, ledger_ik: Any, **kwargs: Any
+    ) -> GetPaymentMethodSetup:
+        query = gql("""
+            query getPaymentMethodSetup($ik: SafeString!, $ledgerIk: SafeString!) {
+              paymentMethodSetup(paymentMethodSetup: {ik: $ik, ledger: {ik: $ledgerIk}}) {
+                id
+                ik
+                clientSecret
+                status
+                mode
+                created
+                currency {
+                  code
+                }
+                paymentMethod {
+                  __typename
+                  id
+                  created
+                  ... on CardPaymentMethod {
+                    brand
+                    last4
+                    expiryMonth
+                    expiryYear
+                  }
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"ik": ik, "ledgerIk": ledger_ik}
+        response = await self.execute(
+            query=query,
+            operation_name="getPaymentMethodSetup",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return GetPaymentMethodSetup.model_validate(data)

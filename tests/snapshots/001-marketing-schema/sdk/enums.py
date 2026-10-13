@@ -265,6 +265,14 @@ class PaymentCurrencyCode(str, Enum):
     USD = "USD"
 
 
+class PaymentMethodSetupStatus(str, Enum):
+    canceled = "canceled"
+    needs_action = "needs_action"
+    needs_payment_method = "needs_payment_method"
+    processing = "processing"
+    saved = "saved"
+
+
 class PaymentMode(str, Enum):
     production = "production"
     sandbox = "sandbox"

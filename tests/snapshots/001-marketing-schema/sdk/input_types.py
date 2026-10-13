@@ -37,6 +37,33 @@ class AddLedgerEntryInput(BaseModel):
     "The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this Ledger Entry"
 
 
+class AgingClearingAccountsFilterSet(BaseModel):
+    """Filters for pending clearing accounts."""
+
+    path: Optional["StringMatchFilter"] = None
+    "Account path filter, with the same wildcard rules as LedgerAccountsFilterSet.path."
+
+
+class AgingClearingAccountsInput(BaseModel):
+    """Selection of pending clearing accounts to count."""
+
+    filter_: Optional["AgingClearingAccountsFilterSet"] = Field(
+        alias="filter", default=None
+    )
+    "Additional account filters."
+
+
+class AgingUnreconciledTxsInput(BaseModel):
+    """Selection of unreconciled transactions to count."""
+
+    filter_: Optional["LedgerUnreconciledTxsFilterSet"] = Field(
+        alias="filter", default=None
+    )
+    "Additional posted-time bounds intersected with each interval."
+    links: list["LinkMatchInput"]
+    "Links identified by Fragment ID or Custom Link creation IK. Provide between 1 and 100 selectors; duplicates are searched once."
+
+
 class ChartOfAccountsInput(BaseModel):
     """The input for your Chart of Accounts in a Schema."""
 
@@ -123,10 +150,14 @@ class CreateLedgerInput(BaseModel):
 
 
 class CreatePaymentInput(BaseModel):
-    """EXPERIMENTAL: The Payment to create."""
+    """The Payment to create."""
 
     parameters: Optional[Any] = None
     "Parameters for the specific Payment Type. Must be a key-value pair of strings. Must be a flat object: nested objects and arrays are rejected."
+    payment_method: Optional["PaymentMethodMatchInput"] = Field(
+        alias="paymentMethod", default=None
+    )
+    "The saved Payment Method to charge for this Payment. When set, the Payment is charged immediately."
     type_: Any = Field(alias="type")
     "The type of the Payment. Must be defined in the Schema linked to the Ledger."
     type_version: int = Field(alias="typeVersion")
@@ -188,6 +219,10 @@ class DateTimeFilter(BaseModel):
     'The timestamp value must be after this moment. Specified in ISO 8601 format e.g "1968-01-01T16:45:00Z"'
     before: Optional[Any] = None
     'The timestamp value must be before this moment. Specified in ISO 8601 format e.g "1968-01-01T16:45:00Z"'
+
+
+class EmailFilter(BaseModel):
+    equal_to: str = Field(alias="equalTo")
 
 
 class EntryGroupMatchInput(BaseModel):
@@ -388,6 +423,13 @@ class LedgerAccountTypeFilter(BaseModel):
     "Results can have any of the specified Ledger Account types"
 
 
+class LedgerAccountUnreconciledTxsFilterSet(BaseModel):
+    """Filters for a ledger account's unreconciled transactions."""
+
+    posted: Optional["DateTimeFilter"] = None
+    "The transaction's posted timestamp. Bounds are inclusive; when both are supplied, before must be later than after."
+
+
 class LedgerAccountsFilterSet(BaseModel):
     clearing_status: Optional["LedgerAccountClearingStatusFilter"] = Field(
         alias="clearingStatus", default=None
@@ -565,7 +607,7 @@ class LedgerEntryTagInput(BaseModel):
     key: Any
     "The key of this tag. Can be up to 128 characters long."
     value: Any
-    "The value associated with this tag's key. Can be up to 128 characters long."
+    "The value associated with this tag's key. Can be up to 256 characters long."
 
 
 class LedgerLineInput(BaseModel):
@@ -596,7 +638,7 @@ class LedgerLineTagInput(BaseModel):
     key: Any
     "The key of this tag. Can be up to 128 characters long."
     value: Any
-    "The value associated with this tag's key. Can be up to 128 characters long."
+    "The value associated with this tag's key. Can be up to 256 characters long."
 
 
 class LedgerLinesFilterSet(BaseModel):
@@ -644,6 +686,13 @@ class LedgerTypeFilter(BaseModel):
     "Must match one of the values provided. Limited to 100 items maximum."
 
 
+class LedgerUnreconciledTxsFilterSet(BaseModel):
+    """Filters for transactions not reconciled to any account in a Ledger."""
+
+    posted: Optional["DateTimeFilter"] = None
+    "Filter by the external transaction's posted timestamp. Bounds are inclusive."
+
+
 class LedgersFilterSet(BaseModel):
     has_schema: Optional[bool] = Field(alias="hasSchema", default=None)
     type_: Optional["LedgerTypeFilter"] = Field(alias="type", default=None)
@@ -675,8 +724,33 @@ class PaymentMatchInput(BaseModel):
     "The Ledger the Payment belongs to."
 
 
+class PaymentMethodMatchInput(BaseModel):
+    """Specify a saved Payment Method by its ID."""
+
+    id: str
+    "FRAGMENT ID of the Payment Method."
+
+
+class PaymentMethodSetupMatchInput(BaseModel):
+    """Specify a Payment Method Setup by using `id`, or `ik` and `ledger`, or all three when they name the same Payment Method Setup."""
+
+    id: Optional[str] = None
+    "The FRAGMENT ID of the Payment Method Setup."
+    ik: Optional[Any] = None
+    "The IK passed to `createPaymentMethodSetup`. Required if you have not provided `id`."
+    ledger: Optional["LedgerMatchInput"] = None
+    "The Ledger the Payment Method Setup belongs to. Required if you have not provided `id`."
+
+
+class PaymentMethodsFilterSet(BaseModel):
+    """Filter the list of saved Payment Methods returned."""
+
+    user: "UserFilter"
+    "Filter by the User the Payment Method belongs to."
+
+
 class PaymentStatusFilter(BaseModel):
-    """EXPERIMENTAL: Filters a result set by Payment status."""
+    """Filters a result set by Payment status."""
 
     equal_to: Optional[PaymentStatus] = Field(alias="equalTo", default=None)
     "Results must have the specified status."
@@ -685,7 +759,7 @@ class PaymentStatusFilter(BaseModel):
 
 
 class PaymentsFilterSet(BaseModel):
-    """EXPERIMENTAL: The filters that can be applied to a list of Payments."""
+    """The filters that can be applied to a list of Payments."""
 
     created: Optional["DateTimeFilter"] = None
     "Use this filter to filter Payments by their `created` timestamp."
@@ -710,7 +784,7 @@ class SceneEventInput(BaseModel):
     event_type: SceneEventType = Field(alias="eventType")
     "The type of the Scene Event."
     payment: Optional["ScenePaymentEventInput"] = None
-    "EXPERIMENTAL: The simulated Payment lifecycle transition. Required when eventType is `payment`."
+    "The simulated Payment lifecycle transition. Required when eventType is `payment`."
 
 
 class SceneInput(BaseModel):
@@ -719,11 +793,11 @@ class SceneInput(BaseModel):
     name: str
     "The human-readable name of the Scene."
     payments: Optional[list["ScenePaymentInput"]] = None
-    "EXPERIMENTAL: The simulated Payments the Scene's payment events reference."
+    "The simulated Payments the Scene's payment events reference."
 
 
 class ScenePaymentEventInput(BaseModel):
-    """EXPERIMENTAL: One lifecycle transition of a simulated Payment, posted as a
+    """One lifecycle transition of a simulated Payment, posted as a
     part of a Scene."""
 
     event: SchemaPaymentAccountingEventKey
@@ -733,7 +807,7 @@ class ScenePaymentEventInput(BaseModel):
 
 
 class ScenePaymentInput(BaseModel):
-    """EXPERIMENTAL: A simulated Payment declared by a Scene. Its lifecycle events
+    """A simulated Payment declared by a Scene. Its lifecycle events
     reference it by `ik`, so one simulated Payment has exactly one set of
     parameters."""
 
@@ -788,6 +862,8 @@ class SchemaExternalAccountMatchInput(BaseModel):
     "The FRAGMENT ID of the external account"
     link_id: Optional[Any] = Field(alias="linkId", default=None)
     "The FRAGMENT ID of the link"
+    link_ik: Optional[Any] = Field(alias="linkIk", default=None)
+    "The idempotency key of a CustomLink, expressed with a schema parameter. Requires linkType: CustomLink.\nIf linkId is also supplied, both must identify the same Link."
     link_type: Optional[LinkType] = Field(alias="linkType", default=None)
     "The type of Link this external account belongs to. Must be one of: IncreaseLink, UnitLink, CustomLink, or StripeLink."
 
@@ -812,7 +888,7 @@ class SchemaInput(BaseModel):
     name: Optional[Any] = None
     "The human-readable name of the Schema."
     payments: Optional["SchemaPaymentsInput"] = None
-    "EXPERIMENTAL: The Payment Types to add to the Schema."
+    "The Payment Types to add to the Schema."
     scenes: Optional[list["SceneInput"]] = None
     "Any scenes associated with this Schema."
 
@@ -855,7 +931,7 @@ class SchemaLedgerAccountInput(BaseModel):
     name: Optional[Any] = None
     "The human-readable name of this Ledger Account."
     payment: Optional["SchemaPaymentInput"] = None
-    "EXPERIMENTAL: Marks this as a Payment Account."
+    "Marks this as a Payment Account."
     status: Optional[SchemaLedgerAccountStatus] = None
     "The status of this Ledger Account. Defaults to active."
     template: Optional[bool] = None
@@ -967,7 +1043,7 @@ class SchemaMatchInput(BaseModel):
 
 
 class SchemaPaymentAccountingInput(BaseModel):
-    """EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
+    """The Ledger Entries a Payment Type posts as a payment moves
     through its lifecycle, keyed by lifecycle transition."""
 
     initiated: Optional["SchemaPaymentEntryInput"] = None
@@ -977,7 +1053,7 @@ class SchemaPaymentAccountingInput(BaseModel):
 
 
 class SchemaPaymentEntryInput(BaseModel):
-    """EXPERIMENTAL: The Ledger Entry a Payment Type posts on a payment lifecycle event."""
+    """The Ledger Entry a Payment Type posts on a payment lifecycle event."""
 
     description: Optional[Any] = None
     "Human-readable description of the payment entry."
@@ -986,13 +1062,13 @@ class SchemaPaymentEntryInput(BaseModel):
 
 
 class SchemaPaymentInput(BaseModel):
-    """EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
+    """Marks a Ledger Account as a Payment Account."""
 
     enabled: bool
 
 
 class SchemaPaymentLineInput(BaseModel):
-    """EXPERIMENTAL: A Ledger Line in a payment entry."""
+    """A Ledger Line in a payment entry."""
 
     account: "SchemaLedgerAccountMatchInput"
     "The Ledger Account this line will be posted to.\nIt supports parameters in its attributes via handlebars syntax."
@@ -1009,7 +1085,7 @@ class SchemaPaymentLineInput(BaseModel):
 
 
 class SchemaPaymentTypeDetailsInput(BaseModel):
-    """EXPERIMENTAL: The payment a Payment Type creates."""
+    """The payment a Payment Type creates."""
 
     amount: Any
     "The amount requested for the payment, as a parameterized expression filled\nfrom createPayment parameters."
@@ -1018,7 +1094,7 @@ class SchemaPaymentTypeDetailsInput(BaseModel):
 
 
 class SchemaPaymentTypeInput(BaseModel):
-    """EXPERIMENTAL: A Payment Type in a Schema. All Payment Types defined in a
+    """A Payment Type in a Schema. All Payment Types defined in a
     Schema must have a unique `type` and `typeVersion` pair."""
 
     accounting: "SchemaPaymentAccountingInput"
@@ -1034,7 +1110,7 @@ class SchemaPaymentTypeInput(BaseModel):
 
 
 class SchemaPaymentsInput(BaseModel):
-    """EXPERIMENTAL: The Payment Types in your Schema."""
+    """The Payment Types in your Schema."""
 
     types: list["SchemaPaymentTypeInput"]
     "A list of Payment Type definitions."
@@ -1178,10 +1254,28 @@ class UpdateLedgerLineInput(BaseModel):
     "The list of Tags to remove from this Ledger Line."
 
 
+class UserFilter(BaseModel):
+    email: "EmailFilter"
+    "Filter by the User's email address."
+    ledger: "LedgerMatchInput"
+    "The Ledger the User belongs to."
+
+
+class UserMatchInput(BaseModel):
+    """Specify a User by their email."""
+
+    email: str
+    "The User's email."
+
+
 AddLedgerEntryInput.model_rebuild()
+AgingClearingAccountsFilterSet.model_rebuild()
+AgingClearingAccountsInput.model_rebuild()
+AgingUnreconciledTxsInput.model_rebuild()
 ChartOfAccountsInput.model_rebuild()
 CreateLedgerAccountInput.model_rebuild()
 CreateLedgerAccountsInput.model_rebuild()
+CreatePaymentInput.model_rebuild()
 CurrencyFilter.model_rebuild()
 CustomAccountInput.model_rebuild()
 CustomTxInput.model_rebuild()
@@ -1195,6 +1289,7 @@ LedgerAccountConsistencyConfigInput.model_rebuild()
 LedgerAccountDataMigrationsFilterSet.model_rebuild()
 LedgerAccountFilter.model_rebuild()
 LedgerAccountMatchInput.model_rebuild()
+LedgerAccountUnreconciledTxsFilterSet.model_rebuild()
 LedgerAccountsFilterSet.model_rebuild()
 LedgerEntriesFilterSet.model_rebuild()
 LedgerEntryConditionInput.model_rebuild()
@@ -1208,9 +1303,12 @@ LedgerEntryInput.model_rebuild()
 LedgerEntryMatchInput.model_rebuild()
 LedgerLineInput.model_rebuild()
 LedgerLinesFilterSet.model_rebuild()
+LedgerUnreconciledTxsFilterSet.model_rebuild()
 LedgersFilterSet.model_rebuild()
 MigrateLedgerEntryInput.model_rebuild()
 PaymentMatchInput.model_rebuild()
+PaymentMethodSetupMatchInput.model_rebuild()
+PaymentMethodsFilterSet.model_rebuild()
 PaymentsFilterSet.model_rebuild()
 SceneEventInput.model_rebuild()
 SceneInput.model_rebuild()
@@ -1230,3 +1328,4 @@ TagFilter.model_rebuild()
 UpdateLedgerAccountInput.model_rebuild()
 UpdateLedgerEntryInput.model_rebuild()
 UpdateLedgerLineInput.model_rebuild()
+UserFilter.model_rebuild()

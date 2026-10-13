@@ -72,6 +72,52 @@ type AddLedgerEntryResult {
   lines: [LedgerLine!]!
 }
 
+"""Filters for pending clearing accounts."""
+input AgingClearingAccountsFilterSet {
+  """
+  Account path filter, with the same wildcard rules as LedgerAccountsFilterSet.path.
+  """
+  path: StringMatchFilter
+}
+
+"""Selection of pending clearing accounts to count."""
+input AgingClearingAccountsInput {
+  """Additional account filters."""
+  filter: AgingClearingAccountsFilterSet
+}
+
+"""Inclusive posted-time bounds usable directly in existing list filters."""
+type AgingInterval {
+  """
+  Unique pending accounts matching ledgerAccounts with this interval's earliestPosted filter. Different pending currencies can place an account in multiple intervals. Null when not requested.
+  """
+  clearingAccountCount: Int
+
+  """Inclusive upper bound for earliestPosted.before or posted.before."""
+  endTime: DateTime!
+
+  """
+  Inclusive lower bound for earliestPosted.after or posted.after; null for the oldest interval.
+  """
+  startTime: DateTime
+
+  """
+  Transactions matching unreconciledTxs with this interval's posted filter and the requested Links and filters. Null when not requested.
+  """
+  unreconciledTxCount: Int
+}
+
+"""Selection of unreconciled transactions to count."""
+input AgingUnreconciledTxsInput {
+  """Additional posted-time bounds intersected with each interval."""
+  filter: LedgerUnreconciledTxsFilterSet
+
+  """
+  Links identified by Fragment ID or Custom Link creation IK. Provide between 1 and 100 selectors; duplicates are searched once.
+  """
+  links: [LinkMatchInput!]!
+}
+
 """A string that must be alphanumeric"""
 scalar AlphaNumericString
 
@@ -128,6 +174,30 @@ Used to configure the write-consistency of a Ledger Account's balance. See [Conf
 enum BalanceUpdateConsistencyMode {
   eventual
   strong
+}
+
+"""A saved card."""
+type CardPaymentMethod implements PaymentMethod {
+  """The card network, for example `visa` or `mastercard`."""
+  brand: String!
+
+  """When the payment method was saved."""
+  created: DateTime!
+
+  """The card's expiry month, 1–12."""
+  expiryMonth: Int!
+
+  """The card's four-digit expiry year."""
+  expiryYear: Int!
+
+  """FRAGMENT ID of the saved Payment Method."""
+  id: ID!
+
+  """The last four digits of the card number."""
+  last4: String!
+
+  """The user who owns this payment method."""
+  user: User!
 }
 
 """The input for your Chart of Accounts in a Schema."""
@@ -319,12 +389,17 @@ type CreateLedgerResult {
   ledger: Ledger!
 }
 
-"""EXPERIMENTAL: The Payment to create."""
+"""The Payment to create."""
 input CreatePaymentInput {
   """
   Parameters for the specific Payment Type. Must be a key-value pair of strings. Must be a flat object: nested objects and arrays are rejected.
   """
   parameters: JSON
+
+  """
+  The saved Payment Method to charge for this Payment. When set, the Payment is charged immediately.
+  """
+  paymentMethod: PaymentMethodMatchInput
 
   """
   The type of the Payment. Must be defined in the Schema linked to the Ledger.
@@ -335,10 +410,26 @@ input CreatePaymentInput {
   typeVersion: Int!
 }
 
+union CreatePaymentMethodSetupResponse = BadRequestError | CreatePaymentMethodSetupResult | InternalError
+
+"""The created Payment Method Setup."""
+type CreatePaymentMethodSetupResult {
+  """
+  Whether an earlier call with the same `ik` created this Payment Method Setup.
+  """
+  isIkReplay: Boolean!
+
+  """The Payment Method Setup that was created."""
+  paymentMethodSetup: PaymentMethodSetup!
+}
+
 union CreatePaymentResponse = BadRequestError | CreatePaymentResult | InternalError
 
-"""EXPERIMENTAL: The created Payment."""
+"""The created Payment."""
 type CreatePaymentResult {
+  """Whether an earlier call with the same `ik` created this Payment."""
+  isIkReplay: Boolean!
+
   """The Payment that was created."""
   payment: Payment!
 }
@@ -715,6 +806,14 @@ type DeleteLedgerResult {
   success: Boolean!
 }
 
+union DeletePaymentMethodResponse = BadRequestError | DeletePaymentMethodResult | InternalError
+
+"""The result of deleting a Payment Method."""
+type DeletePaymentMethodResult {
+  """Whether the Payment Method was deleted."""
+  success: Boolean!
+}
+
 union DeleteSchemaResponse = BadRequestError | DeleteSchemaResult | InternalError
 
 type DeleteSchemaResult {
@@ -724,6 +823,10 @@ type DeleteSchemaResult {
 type DeletedCustomTx {
   """A deleted Tx"""
   tx: Tx!
+}
+
+input EmailFilter {
+  equalTo: String!
 }
 
 input EntryGroupMatchInput {
@@ -1362,7 +1465,7 @@ type Ledger {
   """
   name: String!
 
-  """EXPERIMENTAL: List the Payments on a Ledger, most recent first."""
+  """List the Payments on a Ledger, most recent first."""
   payments(
     """
     Where to start paginating from, when paginating forwards. Send endCursor from a response to get its next page. Learn more about [pagination](https://fragment.dev/guides/query-data#basics-pagination).
@@ -1388,9 +1491,65 @@ type Ledger {
     last: Int
   ): PaymentsConnection!
 
+  """
+  Counts of pending clearing accounts and unreconciled transactions, grouped by age measured from the time of the request.
+  """
+  reconciliationReport(
+    """
+    Requests clearing-account counts. Omit to skip them; provide an empty object for all pending accounts.
+    """
+    clearingAccounts: AgingClearingAccountsInput
+
+    """Unit of age. Monthly intervals use calendar months."""
+    granularity: Granularity!
+
+    """
+    Number of intervals, including the open-ended oldest interval. Between 1 and 7.
+    """
+    intervals: Int!
+
+    """
+    Requests transaction counts for the specified Links. Requires link.read.
+    """
+    unreconciledTxs: AgingUnreconciledTxsInput
+  ): ReconciliationReport!
+
   """Schema key associated with this Ledger."""
   schema: Schema
   type: LedgerTypes!
+
+  """
+  Transactions in the specified Links that have not been reconciled to any account in this Ledger. Includes external accounts not linked to this Ledger. Sorted by posted timestamp, newest first.
+  """
+  unreconciledTxs(
+    """
+    Where to start paginating from, when paginating forwards. Send endCursor from a response to get its next page. Learn more about [pagination](https://fragment.dev/guides/query-data#basics-pagination).
+    """
+    after: String
+
+    """
+    Where to start paginating from, when paginating backwards. Send startCursor from a response to get the previous page. Learn more about [pagination](https://fragment.dev/guides/query-data#basics-pagination).
+    """
+    before: String
+
+    """Filter the unreconciled transactions returned."""
+    filter: LedgerUnreconciledTxsFilterSet
+
+    """
+    The number of unreconciled transactions to return per page, when paginating forwards. Defaults to 20, maximum is 200.
+    """
+    first: Int
+
+    """
+    The number of unreconciled transactions to return per page, when paginating backwards. Defaults to 20, maximum is 200.
+    """
+    last: Int
+
+    """
+    Links to search, identified by Fragment ID or Custom Link creation IK. Provide between 1 and 100 selectors. Duplicate Links are searched once.
+    """
+    links: [LinkMatchInput!]!
+  ): TxsConnection!
   workspaceId: ID! @deprecated(reason: "Callers should not need to query or store this value.")
 }
 
@@ -1993,6 +2152,9 @@ type LedgerAccount {
     """
     before: String
 
+    """Filters for unreconciled transactions."""
+    filter: LedgerAccountUnreconciledTxsFilterSet
+
     """
     The number of unreconciled transactions to return per page, when paginating forwards. Defaults to 20, maximum is 200.
     """
@@ -2264,6 +2426,14 @@ enum LedgerAccountTypes {
   expense
   income
   liability
+}
+
+"""Filters for a ledger account's unreconciled transactions."""
+input LedgerAccountUnreconciledTxsFilterSet {
+  """
+  The transaction's posted timestamp. Bounds are inclusive; when both are supplied, before must be later than after.
+  """
+  posted: DateTimeFilter
 }
 
 """A paginated list of Ledger Accounts"""
@@ -2948,7 +3118,7 @@ input LedgerEntryTagInput {
   key: SafeString!
 
   """
-  The value associated with this tag's key. Can be up to 128 characters long.
+  The value associated with this tag's key. Can be up to 256 characters long.
   """
   value: SafeString!
 }
@@ -3124,7 +3294,7 @@ input LedgerLineTagInput {
   key: SafeString!
 
   """
-  The value associated with this tag's key. Can be up to 128 characters long.
+  The value associated with this tag's key. Can be up to 256 characters long.
   """
   value: SafeString!
 }
@@ -3272,6 +3442,14 @@ input LedgerTypeFilter {
 
 enum LedgerTypes {
   double
+}
+
+"""Filters for transactions not reconciled to any account in a Ledger."""
+input LedgerUnreconciledTxsFilterSet {
+  """
+  Filter by the external transaction's posted timestamp. Bounds are inclusive.
+  """
+  posted: DateTimeFilter
 }
 
 """A paginated list of Ledgers"""
@@ -3463,14 +3641,10 @@ type Mutation {
     ledgerAccounts: [CreateLedgerAccountsInput!]!
   ): CreateLedgerAccountsResponse!
 
-  """
-  EXPERIMENTAL — subject to change.
-  
-  Create a Payment.
-  """
+  """Create a Payment."""
   createPayment(
     """
-    The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency)
+    The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency). Can be up to 128 characters long.
     """
     ik: SafeString!
 
@@ -3480,6 +3654,20 @@ type Mutation {
     """The Payment to create."""
     payment: CreatePaymentInput!
   ): CreatePaymentResponse!
+
+  """Save a Payment Method for a User without charging it."""
+  createPaymentMethodSetup(
+    """
+    The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for the Payment Method Setup. Can be up to 128 characters long. This is not the idempotency key for the saved Payment Method.
+    """
+    ik: SafeString!
+
+    """The Ledger the Payment Method is saved in."""
+    ledger: LedgerMatchInput!
+
+    """The User whose payment method to save."""
+    user: UserMatchInput!
+  ): CreatePaymentMethodSetupResponse!
 
   """
   Delete Txs on a Custom Link. Once deleted, a Tx will not show up in listing queries, but can be resolved by if you lookup by its Fragment ID.
@@ -3495,6 +3683,12 @@ type Mutation {
   After using the deleteLedger mutation you can re-use the ik in a new ledger after a 30 second wait.
   """
   deleteLedger(ledger: LedgerMatchInput!): DeleteLedgerResponse!
+
+  """Delete a Payment Method saved for a User."""
+  deletePaymentMethod(
+    """The Payment Method to delete."""
+    paymentMethod: PaymentMethodMatchInput!
+  ): DeletePaymentMethodResponse!
 
   """Delete a Schema"""
   deleteSchema(schema: SchemaMatchInput!): DeleteSchemaResponse!
@@ -3638,7 +3832,7 @@ scalar ParameterizedString
 """A mapping of parameter keys to values."""
 scalar Parameters
 
-"""EXPERIMENTAL: A Payment posted to a Ledger."""
+"""A Payment posted to a Ledger."""
 type Payment {
   """The amount of this Payment, in whole cents."""
   amount: Int96!
@@ -3651,7 +3845,7 @@ type Payment {
   currency: PaymentCurrency!
 
   """
-  EXPERIMENTAL: The log of events that have occurred on this Payment, most recent first.
+  The log of events that have occurred on this Payment, most recent first.
   """
   events: PaymentEventsConnection!
 
@@ -3682,8 +3876,11 @@ type Payment {
   typeVersion: Int!
 }
 
-"""EXPERIMENTAL: The card network captured the Payment."""
+"""The card network captured the Payment."""
 type PaymentCardCapturedEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
   """
   The `initiated` Ledger Entry, `null` where the Payment Type defines none.
   """
@@ -3696,8 +3893,11 @@ type PaymentCardCapturedEvent implements PaymentEvent {
   status: PaymentStatus!
 }
 
-"""EXPERIMENTAL: The payer completed checkout."""
-type PaymentCheckoutCompletedEvent implements PaymentEvent {
+"""The payer went through checkout."""
+type PaymentCheckoutEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
   """When this event occurred."""
   occurredAt: DateTime!
 
@@ -3705,8 +3905,11 @@ type PaymentCheckoutCompletedEvent implements PaymentEvent {
   status: PaymentStatus!
 }
 
-"""EXPERIMENTAL: The Payment was created."""
+"""The Payment was created."""
 type PaymentCreatedEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
   """When this event occurred."""
   occurredAt: DateTime!
 
@@ -3714,7 +3917,7 @@ type PaymentCreatedEvent implements PaymentEvent {
   status: PaymentStatus!
 }
 
-"""EXPERIMENTAL: The currency a Payment is denominated in."""
+"""The currency a Payment is denominated in."""
 type PaymentCurrency {
   """The currency code."""
   code: PaymentCurrencyCode!
@@ -3730,17 +3933,16 @@ type PaymentCurrency {
   precision: Int!
 }
 
-"""
-EXPERIMENTAL — subject to change.
-
-The currencies a Payment can be denominated in.
-"""
+"""The currencies a Payment can be denominated in."""
 enum PaymentCurrencyCode {
   USD
 }
 
-"""EXPERIMENTAL: Something that happened to a Payment."""
+"""Something that happened to a Payment."""
 interface PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
   """When this event occurred."""
   occurredAt: DateTime!
 
@@ -3748,7 +3950,7 @@ interface PaymentEvent {
   status: PaymentStatus!
 }
 
-"""EXPERIMENTAL: A paginated list of Payment events."""
+"""A paginated list of Payment events."""
 type PaymentEventsConnection {
   """The current page of results."""
   nodes: [PaymentEvent!]!
@@ -3766,14 +3968,110 @@ input PaymentMatchInput {
   ledger: LedgerMatchInput!
 }
 
+"""A payment method saved for a User."""
+interface PaymentMethod {
+  """When the payment method was saved."""
+  created: DateTime!
+
+  """FRAGMENT ID of the saved Payment Method."""
+  id: ID!
+
+  """The user who owns this payment method."""
+  user: User!
+}
+
+"""Specify a saved Payment Method by its ID."""
+input PaymentMethodMatchInput {
+  """FRAGMENT ID of the Payment Method."""
+  id: ID!
+}
+
+"""An attempt to save the Payment Method for a User."""
+type PaymentMethodSetup {
+  """
+  The credential to provide to the `<PaymentMethodSetupSession>` component in the Fragment Elements SDK.
+  """
+  clientSecret: String!
+
+  """When the Payment Method Setup was created."""
+  created: DateTime!
+
+  """The currency the saved payment method will be charged in."""
+  currency: PaymentCurrency!
+
+  """The Fragment ID of this Payment Method Setup."""
+  id: ID!
+
+  """
+  The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) the Payment Method Setup was created with.
+  """
+  ik: SafeString!
+
+  """
+  Whether this Payment Method Setup was created in sandbox or production.
+  """
+  mode: PaymentMode!
+
+  """The Payment Method this setup saved, once its status is `saved`."""
+  paymentMethod: PaymentMethod
+
+  """The status of this Payment Method Setup."""
+  status: PaymentMethodSetupStatus!
+}
+
+"""
+Specify a Payment Method Setup by using `id`, or `ik` and `ledger`, or all three when they name the same Payment Method Setup.
+"""
+input PaymentMethodSetupMatchInput {
+  """The FRAGMENT ID of the Payment Method Setup."""
+  id: ID
+
+  """
+  The IK passed to `createPaymentMethodSetup`. Required if you have not provided `id`.
+  """
+  ik: SafeString
+
+  """
+  The Ledger the Payment Method Setup belongs to. Required if you have not provided `id`.
+  """
+  ledger: LedgerMatchInput
+}
+
+"""Status of a Payment Method Setup."""
+enum PaymentMethodSetupStatus {
+  canceled
+  needs_action
+  needs_payment_method
+  processing
+  saved
+}
+
+"""A list of Payment Methods, all in one page."""
+type PaymentMethodsConnection {
+  """Every Payment Method in the list."""
+  nodes: [PaymentMethod!]!
+
+  """The pagination info for this list. It never reports another page."""
+  pageInfo: PageInfo!
+}
+
+"""Filter the list of saved Payment Methods returned."""
+input PaymentMethodsFilterSet {
+  """Filter by the User the Payment Method belongs to."""
+  user: UserFilter!
+}
+
 """Mode of a Payment."""
 enum PaymentMode {
   production
   sandbox
 }
 
-"""EXPERIMENTAL: The Payment settled."""
+"""The Payment settled."""
 type PaymentSettledEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
   """The `settled` Ledger Entry."""
   ledgerEntry: LedgerEntry!
 
@@ -3784,11 +4082,7 @@ type PaymentSettledEvent implements PaymentEvent {
   status: PaymentStatus!
 }
 
-"""
-EXPERIMENTAL — subject to change.
-
-Status of a Payment.
-"""
+"""Status of a Payment."""
 enum PaymentStatus {
   accepted
   needs_payment_method
@@ -3796,7 +4090,7 @@ enum PaymentStatus {
   settled
 }
 
-"""EXPERIMENTAL: Filters a result set by Payment status."""
+"""Filters a result set by Payment status."""
 input PaymentStatusFilter {
   """Results must have the specified status."""
   equalTo: PaymentStatus
@@ -3805,7 +4099,7 @@ input PaymentStatusFilter {
   in: [PaymentStatus!]
 }
 
-"""EXPERIMENTAL: A paginated list of Payments."""
+"""A paginated list of Payments."""
 type PaymentsConnection {
   """The current page of results."""
   nodes: [Payment!]!
@@ -3814,7 +4108,7 @@ type PaymentsConnection {
   pageInfo: PageInfo!
 }
 
-"""EXPERIMENTAL: The filters that can be applied to a list of Payments."""
+"""The filters that can be applied to a list of Payments."""
 input PaymentsFilterSet {
   """Use this filter to filter Payments by their `created` timestamp."""
   created: DateTimeFilter
@@ -3979,11 +4273,43 @@ type Query {
   """Get all links in a workspace"""
   links: LinksConnection!
 
-  """EXPERIMENTAL: Get a single Payment by its Idempotency Key."""
+  """Get a single Payment by its Idempotency Key."""
   payment(
     """The Ledger Payment to query."""
     payment: PaymentMatchInput!
   ): Payment
+
+  """Get a Payment Method saved for a User."""
+  paymentMethod(
+    """The Payment Method to get."""
+    paymentMethod: PaymentMethodMatchInput!
+  ): PaymentMethod
+
+  """Get a Payment Method Setup."""
+  paymentMethodSetup(
+    """The Payment Method Setup to get."""
+    paymentMethodSetup: PaymentMethodSetupMatchInput!
+  ): PaymentMethodSetup!
+
+  """
+  List the Payment Methods a User saved in a Ledger, newest first. Deleted Payment Methods are not listed.
+  """
+  paymentMethods(
+    """Ignored. The list is always one page."""
+    after: String
+
+    """Ignored. The list is always one page."""
+    before: String
+
+    """The User whose Payment Methods to list."""
+    filter: PaymentMethodsFilterSet!
+
+    """Ignored. The list is always one page."""
+    first: Int
+
+    """Ignored. The list is always one page."""
+    last: Int
+  ): PaymentMethodsConnection!
 
   """Get a Schema by key."""
   schema(
@@ -4064,6 +4390,22 @@ type ReconcileTxResult {
   lines: [LedgerLine!]!
 }
 
+"""Reconciliation counts grouped by age, measured from endTime."""
+type ReconciliationReport {
+  """
+  Time of the request; the exclusive cutoff used to compute interval boundaries.
+  """
+  endTime: DateTime!
+
+  """Unit used to compute interval boundaries."""
+  granularity: Granularity!
+
+  """
+  Intervals ordered youngest first. The final interval has no lower time bound.
+  """
+  intervals: [AgingInterval!]!
+}
+
 union ReverseLedgerEntryResponse = BadRequestError | InternalError | ReverseLedgerEntryResult
 
 type ReverseLedgerEntryResult {
@@ -4104,7 +4446,7 @@ input SceneEventInput {
   eventType: SceneEventType!
 
   """
-  EXPERIMENTAL: The simulated Payment lifecycle transition. Required when eventType is `payment`.
+  The simulated Payment lifecycle transition. Required when eventType is `payment`.
   """
   payment: ScenePaymentEventInput
 }
@@ -4114,7 +4456,7 @@ enum SceneEventType {
   """A simulated Ledger Entry."""
   entry
 
-  """EXPERIMENTAL: One lifecycle transition of a simulated Payment."""
+  """One lifecycle transition of a simulated Payment."""
   payment
 }
 
@@ -4125,14 +4467,12 @@ input SceneInput {
   """The human-readable name of the Scene."""
   name: String!
 
-  """
-  EXPERIMENTAL: The simulated Payments the Scene's payment events reference.
-  """
+  """The simulated Payments the Scene's payment events reference."""
   payments: [ScenePaymentInput!]
 }
 
 """
-EXPERIMENTAL: One lifecycle transition of a simulated Payment, posted as a
+One lifecycle transition of a simulated Payment, posted as a
 part of a Scene.
 """
 input ScenePaymentEventInput {
@@ -4146,7 +4486,7 @@ input ScenePaymentEventInput {
 }
 
 """
-EXPERIMENTAL: A simulated Payment declared by a Scene. Its lifecycle events
+A simulated Payment declared by a Scene. Its lifecycle events
 reference it by `ik`, so one simulated Payment has exactly one set of
 parameters.
 """
@@ -4308,6 +4648,12 @@ input SchemaExternalAccountMatchInput {
   linkId: ParameterizedString
 
   """
+  The idempotency key of a CustomLink, expressed with a schema parameter. Requires linkType: CustomLink.
+  If linkId is also supplied, both must identify the same Link.
+  """
+  linkIk: ParameterizedString
+
+  """
   The type of Link this external account belongs to. Must be one of: IncreaseLink, UnitLink, CustomLink, or StripeLink.
   """
   linkType: LinkType
@@ -4335,7 +4681,7 @@ input SchemaInput {
   """The human-readable name of the Schema."""
   name: ParameterizedString
 
-  """EXPERIMENTAL: The Payment Types to add to the Schema."""
+  """The Payment Types to add to the Schema."""
   payments: SchemaPaymentsInput
 
   """Any scenes associated with this Schema."""
@@ -4404,7 +4750,7 @@ input SchemaLedgerAccountInput {
   """The human-readable name of this Ledger Account."""
   name: ParameterizedString
 
-  """EXPERIMENTAL: Marks this as a Payment Account."""
+  """Marks this as a Payment Account."""
   payment: SchemaPaymentInput
 
   """The status of this Ledger Account. Defaults to active."""
@@ -4623,7 +4969,7 @@ input SchemaMatchInput {
   version: Int
 }
 
-"""EXPERIMENTAL: A lifecycle transition of a Payment."""
+"""A lifecycle transition of a Payment."""
 enum SchemaPaymentAccountingEventKey {
   """The payment was captured and is guaranteed to settle."""
   initiated
@@ -4633,7 +4979,7 @@ enum SchemaPaymentAccountingEventKey {
 }
 
 """
-EXPERIMENTAL: The Ledger Entries a Payment Type posts as a payment moves
+The Ledger Entries a Payment Type posts as a payment moves
 through its lifecycle, keyed by lifecycle transition.
 """
 input SchemaPaymentAccountingInput {
@@ -4644,9 +4990,7 @@ input SchemaPaymentAccountingInput {
   settled: SchemaPaymentEntryInput!
 }
 
-"""
-EXPERIMENTAL: The Ledger Entry a Payment Type posts on a payment lifecycle event.
-"""
+"""The Ledger Entry a Payment Type posts on a payment lifecycle event."""
 input SchemaPaymentEntryInput {
   """Human-readable description of the payment entry."""
   description: ParameterizedString
@@ -4655,12 +4999,12 @@ input SchemaPaymentEntryInput {
   lines: [SchemaPaymentLineInput!]!
 }
 
-"""EXPERIMENTAL: Marks a Ledger Account as a Payment Account."""
+"""Marks a Ledger Account as a Payment Account."""
 input SchemaPaymentInput {
   enabled: Boolean!
 }
 
-"""EXPERIMENTAL: A Ledger Line in a payment entry."""
+"""A Ledger Line in a payment entry."""
 input SchemaPaymentLineInput {
   """
   The Ledger Account this line will be posted to.
@@ -4692,7 +5036,7 @@ input SchemaPaymentLineInput {
   system: SchemaSystemLineKind
 }
 
-"""EXPERIMENTAL: The payment a Payment Type creates."""
+"""The payment a Payment Type creates."""
 input SchemaPaymentTypeDetailsInput {
   """
   The amount requested for the payment, as a parameterized expression filled
@@ -4714,7 +5058,7 @@ enum SchemaPaymentTypeDirection {
 }
 
 """
-EXPERIMENTAL: A Payment Type in a Schema. All Payment Types defined in a
+A Payment Type in a Schema. All Payment Types defined in a
 Schema must have a unique `type` and `typeVersion` pair.
 """
 input SchemaPaymentTypeInput {
@@ -4743,7 +5087,7 @@ enum SchemaPaymentTypeStatus {
   active
 }
 
-"""EXPERIMENTAL: The Payment Types in your Schema."""
+"""The Payment Types in your Schema."""
 input SchemaPaymentsInput {
   """A list of Payment Type definitions."""
   types: [SchemaPaymentTypeInput!]!
@@ -5168,6 +5512,26 @@ union UpdateLedgerResponse = BadRequestError | InternalError | UpdateLedgerResul
 type UpdateLedgerResult {
   """The updated Ledger. """
   ledger: Ledger!
+}
+
+"""A User who pays through a Ledger."""
+type User {
+  """The User's email address."""
+  email: String!
+}
+
+input UserFilter {
+  """Filter by the User's email address."""
+  email: EmailFilter!
+
+  """The Ledger the User belongs to."""
+  ledger: LedgerMatchInput!
+}
+
+"""Specify a User by their email."""
+input UserMatchInput {
+  """The User's email."""
+  email: String!
 }
 
 type Workspace {
