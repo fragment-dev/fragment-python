@@ -261,6 +261,12 @@ class LinkType(str, Enum):
     UnitLink = "UnitLink"
 
 
+class PaymentAttemptStatus(str, Enum):
+    failed = "failed"
+    processing = "processing"
+    succeeded = "succeeded"
+
+
 class PaymentCurrencyCode(str, Enum):
     USD = "USD"
 
@@ -276,6 +282,12 @@ class PaymentMethodSetupStatus(str, Enum):
 class PaymentMode(str, Enum):
     production = "production"
     sandbox = "sandbox"
+
+
+class PaymentRefundStatus(str, Enum):
+    failed = "failed"
+    processing = "processing"
+    settled = "settled"
 
 
 class PaymentStatus(str, Enum):
@@ -321,6 +333,8 @@ class SchemaLedgerEntryStatus(str, Enum):
 
 class SchemaPaymentAccountingEventKey(str, Enum):
     initiated = "initiated"
+    refund_failed = "refund_failed"
+    refund_initiated = "refund_initiated"
     settled = "settled"
 
 
@@ -335,6 +349,8 @@ class SchemaPaymentTypeStatus(str, Enum):
 
 class SchemaSystemLineKind(str, Enum):
     payment_fee_line = "payment_fee_line"
+    payment_refund_line = "payment_refund_line"
+    payment_refund_reversal_line = "payment_refund_reversal_line"
     payment_settlement_line = "payment_settlement_line"
 
 

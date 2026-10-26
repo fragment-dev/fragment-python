@@ -79,6 +79,8 @@ from .post_restaurant_payout_initiate import PostRestaurantPayoutInitiate
 from .post_restaurant_payout_settle import PostRestaurantPayoutSettle
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
+from .refund_payment import RefundPayment
+from .retry_payment import RetryPayment
 from .reverse_ledger_entry import ReverseLedgerEntry
 from .store_schema import StoreSchema
 from .sync_custom_accounts import SyncCustomAccounts
@@ -2728,6 +2730,16 @@ class Client(AsyncFragmentClient):
                     currency {
                       code
                     }
+                    refundedAmount
+                    refunds {
+                      nodes {
+                        id
+                        ik
+                        amount
+                        status
+                        created
+                      }
+                    }
                   }
                 }
                 ... on BadRequestError {
@@ -2757,6 +2769,147 @@ class Client(AsyncFragmentClient):
         data = self.get_data(response)
         return CreatePayment.model_validate(data)
 
+    async def retry_payment(
+        self,
+        attempt_ik: Any,
+        payment_ik: Any,
+        ledger_ik: Any,
+        payment_method: Optional[PaymentMethodMatchInput] = None,
+        **kwargs: Any
+    ) -> RetryPayment:
+        query = gql("""
+            mutation retryPayment($attemptIk: SafeString!, $paymentIk: SafeString!, $ledgerIk: SafeString!, $paymentMethod: PaymentMethodMatchInput) {
+              retryPayment(
+                attemptIk: $attemptIk
+                payment: {ik: $paymentIk, ledger: {ik: $ledgerIk}}
+                paymentMethod: $paymentMethod
+              ) {
+                __typename
+                ... on RetryPaymentResult {
+                  isIkReplay
+                  attempt {
+                    id
+                    status
+                  }
+                  payment {
+                    id
+                    ik
+                    status
+                    amount
+                    mode
+                    currency {
+                      code
+                    }
+                    refundedAmount
+                    refunds {
+                      nodes {
+                        id
+                        ik
+                        amount
+                        status
+                        created
+                      }
+                    }
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "attemptIk": attempt_ik,
+            "paymentIk": payment_ik,
+            "ledgerIk": ledger_ik,
+            "paymentMethod": payment_method,
+        }
+        response = await self.execute(
+            query=query, operation_name="retryPayment", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return RetryPayment.model_validate(data)
+
+    async def refund_payment(
+        self,
+        ik: Any,
+        payment_ik: Any,
+        ledger_ik: Any,
+        amount: Any,
+        parameters: Optional[Any] = None,
+        **kwargs: Any
+    ) -> RefundPayment:
+        query = gql("""
+            mutation refundPayment($ik: SafeString!, $paymentIk: SafeString!, $ledgerIk: SafeString!, $amount: Int96!, $parameters: JSON) {
+              refundPayment(
+                ik: $ik
+                payment: {ik: $paymentIk, ledger: {ik: $ledgerIk}}
+                refund: {amount: $amount, parameters: $parameters}
+              ) {
+                __typename
+                ... on RefundPaymentResult {
+                  isIkReplay
+                  refund {
+                    id
+                    ik
+                    amount
+                    status
+                    created
+                  }
+                  payment {
+                    id
+                    ik
+                    status
+                    amount
+                    mode
+                    currency {
+                      code
+                    }
+                    refundedAmount
+                    refunds {
+                      nodes {
+                        id
+                        ik
+                        amount
+                        status
+                        created
+                      }
+                    }
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {
+            "ik": ik,
+            "paymentIk": payment_ik,
+            "ledgerIk": ledger_ik,
+            "amount": amount,
+            "parameters": parameters,
+        }
+        response = await self.execute(
+            query=query, operation_name="refundPayment", variables=variables, **kwargs
+        )
+        data = self.get_data(response)
+        return RefundPayment.model_validate(data)
+
     async def get_payment(self, ik: Any, ledger_ik: Any, **kwargs: Any) -> GetPayment:
         query = gql("""
             query getPayment($ik: SafeString!, $ledgerIk: SafeString!) {
@@ -2775,6 +2928,16 @@ class Client(AsyncFragmentClient):
                 mode
                 parameters
                 created
+                refundedAmount
+                refunds {
+                  nodes {
+                    id
+                    ik
+                    amount
+                    status
+                    created
+                  }
+                }
               }
             }
             """)
@@ -2809,6 +2972,16 @@ class Client(AsyncFragmentClient):
                     type
                     typeVersion
                     created
+                    refundedAmount
+                    refunds {
+                      nodes {
+                        id
+                        ik
+                        amount
+                        status
+                        created
+                      }
+                    }
                   }
                   pageInfo {
                     hasNextPage

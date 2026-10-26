@@ -228,6 +228,15 @@ input ChartOfAccountsInput {
   defaultCurrencyMode: CurrencyMode
 }
 
+"""An attempt the payer made through checkout."""
+type CheckoutPaymentAttempt implements PaymentAttempt {
+  """The ID of this Payment attempt."""
+  id: ID!
+
+  """The status of this Payment attempt."""
+  status: PaymentAttemptStatus!
+}
+
 input CreateCustomCurrencyInput {
   """
   The currency code for custom currencies. It can be up to 36 characters long. This is used for display purposes.
@@ -3731,6 +3740,43 @@ type Mutation {
     entry: LedgerEntryInput!
   ): ReconcileTxResponse!
 
+  """
+  Refund a settled Payment.
+  
+  The Payment's Payment Type must define the `refund_initiated` and `refund_failed` Ledger Entries.
+  A Payment can be refunded at most 10 times.
+  """
+  refundPayment(
+    """
+    The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this Payment Refund. Can be up to 128 characters long.
+    """
+    ik: SafeString!
+
+    """The Payment to refund."""
+    payment: PaymentMatchInput!
+
+    """The Payment Refund to create."""
+    refund: RefundPaymentInput!
+  ): RefundPaymentResponse!
+
+  """
+  Retry a Payment on a saved Payment Method after its latest attempt was declined, rejected or canceled.
+  """
+  retryPayment(
+    """
+    The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) for this Retry, unique within the Payment. Can be up to 128 characters long.
+    """
+    attemptIk: SafeString!
+
+    """The Payment to retry."""
+    payment: PaymentMatchInput!
+
+    """
+    The saved Payment Method to charge. When omitted, charges the previous attempt's saved Payment Method.
+    """
+    paymentMethod: PaymentMethodMatchInput
+  ): RetryPaymentResponse!
+
   """Reverses a Ledger Entry"""
   reverseLedgerEntry(
     """The Fragment ID of the Ledger Entry to reverse"""
@@ -3837,6 +3883,9 @@ type Payment {
   """The amount of this Payment, in whole cents."""
   amount: Int96!
 
+  """The Payment's attempts, newest first."""
+  attempts: PaymentAttemptsConnection!
+
   """The credential the payments SDK presents to `confirmPayment`."""
   clientSecret: String!
   created: DateTime!
@@ -3866,6 +3915,12 @@ type Payment {
   """Parameters the Payment was created with."""
   parameters: JSON!
 
+  """The amount refunded from this Payment, in whole cents."""
+  refundedAmount: Int96!
+
+  """The Payment's refunds, newest first."""
+  refunds: PaymentRefundsConnection!
+
   """The status of this Payment."""
   status: PaymentStatus!
 
@@ -3876,8 +3931,58 @@ type Payment {
   typeVersion: Int!
 }
 
+"""One try at charging a Payment."""
+interface PaymentAttempt {
+  """The ID of this Payment attempt."""
+  id: ID!
+
+  """The status of this Payment attempt."""
+  status: PaymentAttemptStatus!
+}
+
+"""Status of a Payment attempt."""
+enum PaymentAttemptStatus {
+  failed
+  processing
+  succeeded
+}
+
+"""A paginated list of Payment attempts."""
+type PaymentAttemptsConnection {
+  """The current page of results."""
+  nodes: [PaymentAttempt!]!
+
+  """The pagination info for this list."""
+  pageInfo: PageInfo!
+}
+
+"""The payer abandoned or failed the 3DS check."""
+type PaymentCard3DSCanceledEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """
+  The status of the Payment after this event. Always `needs_payment_method`, even while a newer attempt keeps the Payment `processing`.
+  """
+  paymentStatus: PaymentStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
 """The card network captured the Payment."""
 type PaymentCardCapturedEvent implements PaymentEvent {
+  """The captured attempt. `null` on events recorded before attempts."""
+  attempt: PaymentAttempt
+
+  """
+  The status of the attempt after this event. Always `succeeded`. `null` on events recorded before attempt statuses.
+  """
+  attemptStatus: PaymentAttemptStatus
+
   """The ID of this Payment event."""
   id: ID!
 
@@ -3889,20 +3994,64 @@ type PaymentCardCapturedEvent implements PaymentEvent {
   """When this event occurred."""
   occurredAt: DateTime!
 
+  """The status of the Payment after this event. Always `accepted`."""
+  paymentStatus: PaymentStatus!
+
   """The status of the Payment after this event."""
-  status: PaymentStatus!
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
 }
 
-"""The payer went through checkout."""
-type PaymentCheckoutEvent implements PaymentEvent {
+"""The card was declined, or the charge refused."""
+type PaymentCardDeclinedEvent implements PaymentEvent {
+  """The attempt that failed."""
+  attempt: PaymentAttempt!
+
+  """The status of the attempt after this event. Always `failed`."""
+  attemptStatus: PaymentAttemptStatus!
+
+  """
+  The payment processor's reason for the decline, `null` when it gave none.
+  """
+  declineCode: String
+
   """The ID of this Payment event."""
   id: ID!
 
   """When this event occurred."""
   occurredAt: DateTime!
 
+  """
+  The status of the Payment after this event. Always `needs_payment_method`, even while a newer attempt keeps the Payment `processing`.
+  """
+  paymentStatus: PaymentStatus!
+
   """The status of the Payment after this event."""
-  status: PaymentStatus!
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
+"""The payer went through checkout."""
+type PaymentCheckoutEvent implements PaymentEvent {
+  """
+  The attempt checkout started. `null` on events recorded before attempts.
+  """
+  attempt: PaymentAttempt
+
+  """
+  The status of the attempt after this event. Always `processing`. `null` on events recorded before attempt statuses.
+  """
+  attemptStatus: PaymentAttemptStatus
+
+  """The ID of this Payment event."""
+  id: ID!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event. Always `processing`."""
+  paymentStatus: PaymentStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
 }
 
 """The Payment was created."""
@@ -3913,8 +4062,13 @@ type PaymentCreatedEvent implements PaymentEvent {
   """When this event occurred."""
   occurredAt: DateTime!
 
+  """
+  The status of the Payment after this event: `needs_payment_method` for checkout, `processing` for a saved Payment Method.
+  """
+  paymentStatus: PaymentStatus!
+
   """The status of the Payment after this event."""
-  status: PaymentStatus!
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
 }
 
 """The currency a Payment is denominated in."""
@@ -3947,7 +4101,7 @@ interface PaymentEvent {
   occurredAt: DateTime!
 
   """The status of the Payment after this event."""
-  status: PaymentStatus!
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
 }
 
 """A paginated list of Payment events."""
@@ -3959,13 +4113,16 @@ type PaymentEventsConnection {
   pageInfo: PageInfo!
 }
 
-"""Specify a Ledger Payment by using `ledger` and `ik`."""
+"""Specify a Payment by `id`, or by `ledger` and `ik`."""
 input PaymentMatchInput {
+  """The FRAGMENT ID of the Payment."""
+  id: ID
+
   """The Idempotency Key the Payment was created with."""
-  ik: SafeString!
+  ik: SafeString
 
   """The Ledger the Payment belongs to."""
-  ledger: LedgerMatchInput!
+  ledger: LedgerMatchInput
 }
 
 """A payment method saved for a User."""
@@ -4067,6 +4224,132 @@ enum PaymentMode {
   sandbox
 }
 
+"""A refund issued against a Payment."""
+type PaymentRefund {
+  """The amount of this Payment Refund, in whole cents."""
+  amount: Int96!
+
+  """When this Payment Refund was created."""
+  created: DateTime!
+
+  """The ID of this Payment Refund."""
+  id: ID!
+
+  """
+  The [Idempotency Key](https://fragment.dev/api-reference/api-overview#idempotency) the Payment Refund was created with.
+  """
+  ik: SafeString!
+
+  """The status of this Payment Refund."""
+  status: PaymentRefundStatus!
+}
+
+"""A refund against the Payment failed."""
+type PaymentRefundFailedEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
+  """The refund reversal's Ledger Entry."""
+  ledgerEntry: LedgerEntry!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  paymentStatus: PaymentStatus!
+
+  """The Payment Refund this event describes."""
+  refund: PaymentRefund!
+
+  """The status of the refund after this event. Always `failed`."""
+  refundStatus: PaymentRefundStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
+"""A refund was initiated against the Payment."""
+type PaymentRefundInitiatedEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
+  """The refund's Ledger Entry."""
+  ledgerEntry: LedgerEntry!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  paymentStatus: PaymentStatus!
+
+  """The Payment Refund this event describes."""
+  refund: PaymentRefund!
+
+  """The status of the refund after this event. Always `processing`."""
+  refundStatus: PaymentRefundStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
+"""A refund against the Payment settled."""
+type PaymentRefundSettledEvent implements PaymentEvent {
+  """The ID of this Payment event."""
+  id: ID!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event."""
+  paymentStatus: PaymentStatus!
+
+  """The Payment Refund this event describes."""
+  refund: PaymentRefund!
+
+  """The status of the refund after this event. Always `settled`."""
+  refundStatus: PaymentRefundStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
+"""Status of a Payment refund."""
+enum PaymentRefundStatus {
+  failed
+  processing
+  settled
+}
+
+"""A paginated list of Payment refunds."""
+type PaymentRefundsConnection {
+  """The current page of results."""
+  nodes: [PaymentRefund!]!
+
+  """The pagination info for this list."""
+  pageInfo: PageInfo!
+}
+
+"""The Customer retried the Payment on a saved payment method."""
+type PaymentRetryEvent implements PaymentEvent {
+  """The attempt the Retry started."""
+  attempt: SavedPaymentMethodPaymentAttempt!
+
+  """The status of the attempt after this event. Always `processing`."""
+  attemptStatus: PaymentAttemptStatus!
+
+  """The ID of this Payment event."""
+  id: ID!
+
+  """When this event occurred."""
+  occurredAt: DateTime!
+
+  """The status of the Payment after this event. Always `processing`."""
+  paymentStatus: PaymentStatus!
+
+  """The status of the Payment after this event."""
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
+}
+
 """The Payment settled."""
 type PaymentSettledEvent implements PaymentEvent {
   """The ID of this Payment event."""
@@ -4078,8 +4361,11 @@ type PaymentSettledEvent implements PaymentEvent {
   """When this event occurred."""
   occurredAt: DateTime!
 
+  """The status of the Payment after this event. Always `settled`."""
+  paymentStatus: PaymentStatus!
+
   """The status of the Payment after this event."""
-  status: PaymentStatus!
+  status: PaymentStatus! @deprecated(reason: "Use `paymentStatus` on each event type.")
 }
 
 """Status of a Payment."""
@@ -4273,7 +4559,7 @@ type Query {
   """Get all links in a workspace"""
   links: LinksConnection!
 
-  """Get a single Payment by its Idempotency Key."""
+  """Get a single Payment by its ID or Idempotency Key in a Ledger."""
   payment(
     """The Ledger Payment to query."""
     payment: PaymentMatchInput!
@@ -4406,6 +4692,47 @@ type ReconciliationReport {
   intervals: [AgingInterval!]!
 }
 
+"""The Payment Refund to create."""
+input RefundPaymentInput {
+  """The amount to refund, in whole cents."""
+  amount: Int96!
+
+  """Values for the parameters only the refund entries use."""
+  parameters: JSON
+}
+
+union RefundPaymentResponse = BadRequestError | InternalError | RefundPaymentResult
+
+"""The created Payment Refund."""
+type RefundPaymentResult {
+  """
+  Whether an earlier call with the same `ik` created this Payment Refund.
+  """
+  isIkReplay: Boolean!
+
+  """The Payment after reserving the refund amount."""
+  payment: Payment!
+
+  """The created Payment Refund."""
+  refund: PaymentRefund!
+}
+
+union RetryPaymentResponse = BadRequestError | InternalError | RetryPaymentResult
+
+"""The Payment and the attempt the Retry started."""
+type RetryPaymentResult {
+  """The attempt this `attemptIk` started. Its outcome events name it."""
+  attempt: SavedPaymentMethodPaymentAttempt!
+
+  """
+  Whether an earlier call with the same `attemptIk` started this attempt.
+  """
+  isIkReplay: Boolean!
+
+  """The retried Payment."""
+  payment: Payment!
+}
+
 union ReverseLedgerEntryResponse = BadRequestError | InternalError | ReverseLedgerEntryResult
 
 type ReverseLedgerEntryResult {
@@ -4423,6 +4750,15 @@ type ReverseLedgerEntryResult {
 A string with delimiter characters `/`, `#`, and `:` disallowed, as well as parameters in {{handlebar}} syntax.
 """
 scalar SafeString
+
+"""An attempt that charged a saved Payment Method."""
+type SavedPaymentMethodPaymentAttempt implements PaymentAttempt {
+  """The ID of this Payment attempt."""
+  id: ID!
+
+  """The status of this Payment attempt."""
+  status: PaymentAttemptStatus!
+}
 
 """A simulated Ledger Entry posted as a part of a Scene."""
 input SceneEntryInput {
@@ -4974,6 +5310,12 @@ enum SchemaPaymentAccountingEventKey {
   """The payment was captured and is guaranteed to settle."""
   initiated
 
+  """EXPERIMENTAL: An initiated refund failed."""
+  refund_failed
+
+  """EXPERIMENTAL: A refund of the settled payment is initiated."""
+  refund_initiated
+
   """The payment settled."""
   settled
 }
@@ -4985,6 +5327,14 @@ through its lifecycle, keyed by lifecycle transition.
 input SchemaPaymentAccountingInput {
   """Posted when the payment is captured. Optional."""
   initiated: SchemaPaymentEntryInput
+
+  """EXPERIMENTAL: Posted when an initiated refund fails. Optional."""
+  refund_failed: SchemaPaymentEntryInput
+
+  """
+  EXPERIMENTAL: Posted when a refund of the settled payment is initiated. Optional.
+  """
+  refund_initiated: SchemaPaymentEntryInput
 
   """Posted when the payment settles. Every Payment Type must define it."""
   settled: SchemaPaymentEntryInput!
@@ -5113,6 +5463,16 @@ enum SchemaSystemLineKind {
   The line carrying the Fragment fee amount, posted to the Payment Account.
   """
   payment_fee_line
+
+  """
+  The line removing the refund amount from the Payment Account when a Refund is initiated.
+  """
+  payment_refund_line
+
+  """
+  The line restoring the refund amount to the Payment Account when a Refund fails.
+  """
+  payment_refund_reversal_line
 
   """
   The line carrying the settled payment amount, posted to the Payment Account.

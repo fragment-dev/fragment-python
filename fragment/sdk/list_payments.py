@@ -6,7 +6,7 @@ from typing import Any, Optional
 from pydantic import Field
 
 from .base_model import BaseModel
-from .enums import PaymentCurrencyCode, PaymentStatus
+from .enums import PaymentCurrencyCode, PaymentRefundStatus, PaymentStatus
 
 
 class ListPayments(BaseModel):
@@ -31,10 +31,24 @@ class ListPaymentsLedgerPaymentsNodes(BaseModel):
     type_: Any = Field(alias="type")
     type_version: int = Field(alias="typeVersion")
     created: Any
+    refunded_amount: Any = Field(alias="refundedAmount")
+    refunds: "ListPaymentsLedgerPaymentsNodesRefunds"
 
 
 class ListPaymentsLedgerPaymentsNodesCurrency(BaseModel):
     code: PaymentCurrencyCode
+
+
+class ListPaymentsLedgerPaymentsNodesRefunds(BaseModel):
+    nodes: list["ListPaymentsLedgerPaymentsNodesRefundsNodes"]
+
+
+class ListPaymentsLedgerPaymentsNodesRefundsNodes(BaseModel):
+    id: str
+    ik: Any
+    amount: Any
+    status: PaymentRefundStatus
+    created: Any
 
 
 class ListPaymentsLedgerPaymentsPageInfo(BaseModel):
@@ -48,3 +62,4 @@ ListPayments.model_rebuild()
 ListPaymentsLedger.model_rebuild()
 ListPaymentsLedgerPayments.model_rebuild()
 ListPaymentsLedgerPaymentsNodes.model_rebuild()
+ListPaymentsLedgerPaymentsNodesRefunds.model_rebuild()
