@@ -6,7 +6,7 @@ from typing import Any, Optional
 from pydantic import Field
 
 from .base_model import BaseModel
-from .enums import PaymentCurrencyCode, PaymentMode, PaymentStatus
+from .enums import PaymentCurrencyCode, PaymentMode, PaymentRefundStatus, PaymentStatus
 
 
 class GetPayment(BaseModel):
@@ -24,6 +24,8 @@ class GetPaymentPayment(BaseModel):
     mode: PaymentMode
     parameters: Any
     created: Any
+    refunded_amount: Any = Field(alias="refundedAmount")
+    refunds: "GetPaymentPaymentRefunds"
 
 
 class GetPaymentPaymentCurrency(BaseModel):
@@ -32,5 +34,18 @@ class GetPaymentPaymentCurrency(BaseModel):
     precision: int
 
 
+class GetPaymentPaymentRefunds(BaseModel):
+    nodes: list["GetPaymentPaymentRefundsNodes"]
+
+
+class GetPaymentPaymentRefundsNodes(BaseModel):
+    id: str
+    ik: Any
+    amount: Any
+    status: PaymentRefundStatus
+    created: Any
+
+
 GetPayment.model_rebuild()
 GetPaymentPayment.model_rebuild()
+GetPaymentPaymentRefunds.model_rebuild()

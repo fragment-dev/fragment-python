@@ -716,11 +716,13 @@ class MigrateLedgerEntryInput(BaseModel):
 
 
 class PaymentMatchInput(BaseModel):
-    """Specify a Ledger Payment by using `ledger` and `ik`."""
+    """Specify a Payment by `id`, or by `ledger` and `ik`."""
 
-    ik: Any
+    id: Optional[str] = None
+    "The FRAGMENT ID of the Payment."
+    ik: Optional[Any] = None
     "The Idempotency Key the Payment was created with."
-    ledger: "LedgerMatchInput"
+    ledger: Optional["LedgerMatchInput"] = None
     "The Ledger the Payment belongs to."
 
 
@@ -765,6 +767,15 @@ class PaymentsFilterSet(BaseModel):
     "Use this filter to filter Payments by their `created` timestamp."
     status: Optional["PaymentStatusFilter"] = None
     "Use this to filter Payments by their status."
+
+
+class RefundPaymentInput(BaseModel):
+    """The Payment Refund to create."""
+
+    amount: Any
+    "The amount to refund, in whole cents."
+    parameters: Optional[Any] = None
+    "Values for the parameters only the refund entries use."
 
 
 class SceneEntryInput(BaseModel):
@@ -1048,6 +1059,10 @@ class SchemaPaymentAccountingInput(BaseModel):
 
     initiated: Optional["SchemaPaymentEntryInput"] = None
     "Posted when the payment is captured. Optional."
+    refund_failed: Optional["SchemaPaymentEntryInput"] = None
+    "EXPERIMENTAL: Posted when an initiated refund fails. Optional."
+    refund_initiated: Optional["SchemaPaymentEntryInput"] = None
+    "EXPERIMENTAL: Posted when a refund of the settled payment is initiated. Optional."
     settled: "SchemaPaymentEntryInput"
     "Posted when the payment settles. Every Payment Type must define it."
 

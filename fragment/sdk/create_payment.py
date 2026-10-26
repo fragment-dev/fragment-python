@@ -6,7 +6,7 @@ from typing import Any, Literal, Union
 from pydantic import Field
 
 from .base_model import BaseModel
-from .enums import PaymentCurrencyCode, PaymentMode, PaymentStatus
+from .enums import PaymentCurrencyCode, PaymentMode, PaymentRefundStatus, PaymentStatus
 
 
 class CreatePayment(BaseModel):
@@ -37,10 +37,24 @@ class CreatePaymentCreatePaymentCreatePaymentResultPayment(BaseModel):
     amount: Any
     mode: PaymentMode
     currency: "CreatePaymentCreatePaymentCreatePaymentResultPaymentCurrency"
+    refunded_amount: Any = Field(alias="refundedAmount")
+    refunds: "CreatePaymentCreatePaymentCreatePaymentResultPaymentRefunds"
 
 
 class CreatePaymentCreatePaymentCreatePaymentResultPaymentCurrency(BaseModel):
     code: PaymentCurrencyCode
+
+
+class CreatePaymentCreatePaymentCreatePaymentResultPaymentRefunds(BaseModel):
+    nodes: list["CreatePaymentCreatePaymentCreatePaymentResultPaymentRefundsNodes"]
+
+
+class CreatePaymentCreatePaymentCreatePaymentResultPaymentRefundsNodes(BaseModel):
+    id: str
+    ik: Any
+    amount: Any
+    status: PaymentRefundStatus
+    created: Any
 
 
 class CreatePaymentCreatePaymentInternalError(BaseModel):
@@ -53,3 +67,4 @@ class CreatePaymentCreatePaymentInternalError(BaseModel):
 CreatePayment.model_rebuild()
 CreatePaymentCreatePaymentCreatePaymentResult.model_rebuild()
 CreatePaymentCreatePaymentCreatePaymentResultPayment.model_rebuild()
+CreatePaymentCreatePaymentCreatePaymentResultPaymentRefunds.model_rebuild()
