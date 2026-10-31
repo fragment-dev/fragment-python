@@ -269,6 +269,17 @@ def extract_entry_spec(
         return None
     entry_type = type_node.value
 
+    version_node = _get_object_field(entry_arg, "typeVersion")
+    if isinstance(version_node, VariableNode):
+        # A batch model has a fixed identity and cannot preserve a version the
+        # single-entry caller selects, even when that variable has a default.
+        console_log.warning(
+            "Operation %s binds typeVersion to a variable; skipping its typed "
+            "batch payload because the entry version cannot be determined.",
+            operation_definition.name.value,
+        )
+        return None
+
     parameters = _extract_parameters(
         _get_object_field(entry_arg, "parameters"),
         operation_definition,
@@ -276,7 +287,6 @@ def extract_entry_spec(
     )
 
     type_version = DEFAULT_TYPE_VERSION
-    version_node = _get_object_field(entry_arg, "typeVersion")
     if isinstance(version_node, IntValueNode):
         type_version = int(version_node.value)
 
