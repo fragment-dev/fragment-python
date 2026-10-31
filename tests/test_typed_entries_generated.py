@@ -11,12 +11,14 @@ Offline; no credentials required.
 
 import importlib
 import itertools
+import logging
 import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, List, Optional, Type
 
 import pytest
+from ariadne_codegen.main import client as generate_graphql_client
 from ariadne_codegen.utils import str_to_snake_case
 from graphql import OperationDefinitionNode, parse
 
@@ -24,6 +26,7 @@ from graphql import OperationDefinitionNode, parse
 from sdk import typed_entries as snapshot_typed_entries
 from sdk.input_types import AddLedgerEntryInput
 
+from fragment.codegen.helpers import get_codegen_config
 from fragment.codegen.typed_entries import EntrySpec, extract_entry_spec, render_module
 
 SNAPSHOT_QUERIES = (
@@ -322,3 +325,62 @@ def _annotations_for(definition: OperationDefinitionNode) -> Dict[str, str]:
         str_to_snake_case(vd.variable.name.value): "str"
         for vd in definition.variable_definitions
     }
+
+
+@pytest.mark.parametrize("use_sync_client", [False, True])
+def test_dynamic_version_cannot_claim_a_fixed_version_payload(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, use_sync_client: bool
+) -> None:
+    """A custom operation must not replace a pinned model with a guessed v1."""
+    caplog.set_level(logging.WARNING, logger="console")
+    queries = tmp_path / "queries.graphql"
+    queries.write_text(
+        """mutation DynamicThing($ik: SafeString!, $ledgerIk: SafeString!,
+                                $version: Int = 2, $amount: String!) {
+          addLedgerEntry(ik: $ik, entry: {ledger: {ik: $ledgerIk}, type: "thing",
+            typeVersion: $version, parameters: {amount: $amount}}) { __typename }
+        }
+        mutation DynamicOnly($ik: SafeString!, $ledgerIk: SafeString!,
+                             $version: Int, $amount: String!) {
+          addLedgerEntry(ik: $ik, entry: {ledger: {ik: $ledgerIk}, type: "dynamic_only",
+            typeVersion: $version, parameters: {amount: $amount}}) { __typename }
+        }
+        mutation PinnedThing($ik: SafeString!, $ledgerIk: SafeString!, $userId: String!) {
+          addLedgerEntry(ik: $ik, entry: {ledger: {ik: $ledgerIk}, type: "thing",
+            typeVersion: 1, parameters: {user_id: $userId}}) { __typename }
+        }
+        mutation addLedgerEntries($entries: [AddLedgerEntryInput!]!) {
+          addLedgerEntries(entries: $entries) { __typename }
+        }""",
+        encoding="utf-8",
+    )
+    package_name = f"versioned_client_{next(_PACKAGE_COUNTER)}"
+    generate_graphql_client(
+        get_codegen_config(
+            schema_path=str(SNAPSHOT_QUERIES.parent.parent / "schema.graphql"),
+            queries_path=str(queries),
+            target_package_name=package_name,
+            target_package_path=str(tmp_path),
+            use_sync_client=use_sync_client,
+        )
+    )
+
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module(f"{package_name}.typed_entries")
+        client_module = importlib.import_module(f"{package_name}.client")
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    # Both custom single-entry operations remain callable with a version.
+    assert hasattr(client_module.Client, "dynamic_thing")
+    assert hasattr(client_module.Client, "dynamic_only")
+    assert hasattr(client_module.Client, "add_ledger_entries")
+    assert module.ThingV1.PARAMETER_FIELDS == {"user_id": "user_id"}
+    assert {model.__name__ for model in models_in(module)} == {"ThingV1"}
+    entry = module.ThingV1(ik="entry-1", ledger_ik="ledger-1", user_id="user-1")
+    assert entry.model_dump()["entry"]["typeVersion"] == 1
+    assert entry.model_dump()["entry"]["parameters"] == {"user_id": "user-1"}
+    for name in ("DynamicThing", "DynamicOnly"):
+        assert name in caplog.text
+    assert "typeVersion" in caplog.text
