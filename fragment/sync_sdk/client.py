@@ -11,10 +11,12 @@ from .create_custom_link import CreateCustomLink
 from .create_ledger import CreateLedger
 from .create_payment import CreatePayment
 from .create_payment_method_setup import CreatePaymentMethodSetup
+from .create_webhook_subscription import CreateWebhookSubscription
 from .delete_custom_txs import DeleteCustomTxs
 from .delete_ledger import DeleteLedger
 from .delete_payment_method import DeletePaymentMethod
 from .delete_schema import DeleteSchema
+from .delete_webhook_subscription import DeleteWebhookSubscription
 from .enums import ReadBalanceConsistencyMode
 from .get_account_data_migrations import GetAccountDataMigrations
 from .get_entries_to_migrate_for_ledger_account_data_migration import (
@@ -66,6 +68,7 @@ from .list_multi_currency_ledger_account_balances import (
 )
 from .list_payment_methods import ListPaymentMethods
 from .list_payments import ListPayments
+from .list_webhook_subscriptions import ListWebhookSubscriptions
 from .migrate_ledger_entry import MigrateLedgerEntry
 from .reconcile_tx import ReconcileTx
 from .reconcile_tx_runtime import ReconcileTxRuntime
@@ -2441,3 +2444,102 @@ class Client(SyncFragmentClient):
         )
         data = self.get_data(response)
         return GetPaymentMethodSetup.model_validate(data)
+
+    def create_webhook_subscription(
+        self, url: str, **kwargs: Any
+    ) -> CreateWebhookSubscription:
+        query = gql("""
+            mutation createWebhookSubscription($url: String!) {
+              createWebhookSubscription(input: {url: $url}) {
+                __typename
+                ... on CreateWebhookSubscriptionResult {
+                  signingSecret
+                  subscription {
+                    id
+                    url
+                    created
+                  }
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"url": url}
+        response = self.execute(
+            query=query,
+            operation_name="createWebhookSubscription",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return CreateWebhookSubscription.model_validate(data)
+
+    def list_webhook_subscriptions(
+        self, after: Optional[str] = None, first: Optional[int] = None, **kwargs: Any
+    ) -> ListWebhookSubscriptions:
+        query = gql("""
+            query listWebhookSubscriptions($after: String, $first: Int) {
+              webhookSubscriptions(after: $after, first: $first) {
+                nodes {
+                  id
+                  url
+                  created
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"after": after, "first": first}
+        response = self.execute(
+            query=query,
+            operation_name="listWebhookSubscriptions",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return ListWebhookSubscriptions.model_validate(data)
+
+    def delete_webhook_subscription(
+        self, id: str, **kwargs: Any
+    ) -> DeleteWebhookSubscription:
+        query = gql("""
+            mutation deleteWebhookSubscription($id: ID!) {
+              deleteWebhookSubscription(id: $id) {
+                __typename
+                ... on DeleteWebhookSubscriptionResult {
+                  success
+                }
+                ... on BadRequestError {
+                  code
+                  message
+                  retryable
+                }
+                ... on InternalError {
+                  code
+                  message
+                  retryable
+                }
+              }
+            }
+            """)
+        variables: dict[str, object] = {"id": id}
+        response = self.execute(
+            query=query,
+            operation_name="deleteWebhookSubscription",
+            variables=variables,
+            **kwargs
+        )
+        data = self.get_data(response)
+        return DeleteWebhookSubscription.model_validate(data)

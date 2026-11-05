@@ -272,8 +272,6 @@ class PaymentCurrencyCode(str, Enum):
 
 
 class PaymentMethodSetupStatus(str, Enum):
-    canceled = "canceled"
-    needs_action = "needs_action"
     needs_payment_method = "needs_payment_method"
     processing = "processing"
     saved = "saved"
@@ -307,6 +305,12 @@ class ReadBalanceConsistencyMode(str, Enum):
     eventual = "eventual"
     strong = "strong"
     use_account = "use_account"
+
+
+class ReadBalancesConsistencyMode(str, Enum):
+    eventual = "eventual"
+    strong = "strong"
+    transactional = "transactional"
 
 
 class SceneEventType(str, Enum):
