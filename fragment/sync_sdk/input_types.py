@@ -164,6 +164,10 @@ class CreatePaymentInput(BaseModel):
     "The version of the Payment Type."
 
 
+class CreateWebhookSubscriptionInput(BaseModel):
+    url: str
+
+
 class CurrencyFilter(BaseModel):
     equal_to: Optional["CurrencyMatchInput"] = Field(alias="equalTo", default=None)
     "Must match the value provided"
@@ -342,6 +346,15 @@ class Int96Filter(BaseModel):
     "Must not equal this Int96 value"
 
 
+class LedgerAccountBalanceMatchInput(BaseModel):
+    """One Ledger Account and the currency of the balance to read."""
+
+    currency: "CurrencyMatchInput"
+    "The currency of the balance to read."
+    ledger_account: "LedgerAccountMatchInput" = Field(alias="ledgerAccount")
+    "The Ledger Account, by ID or by Ledger and path."
+
+
 class LedgerAccountClearingStatusFilter(BaseModel):
     equal_to: Optional[LedgerAccountClearingStatus] = Field(
         alias="equalTo", default=None
@@ -462,12 +475,14 @@ class LedgerAccountsFilterSet(BaseModel):
     )
     "Use this to filter Ledger Accounts by their parent account IDs"
     path: Optional["StringMatchFilter"] = None
-    "A filter that must match the account path. Wildcards ('*') may be used only for template variables, and will only match a single variable each.\nFor example: 'assets-root/accounts-receivable/merchant:*' would match: 'assets-root/accounts-receivable/merchant:1' and 'assets-root/accounts-receivable/merchant:1/child'.\nWildcards may not be used outside of template variables. For example, passing in 'assets-root/*' as a filter is invalid and would raise a GraphQL error."
+    "A filter that must match the account path. Wildcards ('*') may be used in place of template variables, and will only match a single variable each.\nFor example: 'assets-root/accounts-receivable/merchant:*' would match 'assets-root/accounts-receivable/merchant:1' and 'assets-root/accounts-receivable/merchant:2', but not 'assets-root/accounts-receivable/merchant:1/child'.\nTo list every descendant of a Ledger Account at any depth, use a trailing '/*' in 'matches', e.g. 'assets-root/*'. This returns every account under 'assets-root', but not 'assets-root' itself.\nA single pattern cannot combine a trailing '/*' with a template wildcard, and wildcards may not appear anywhere else in the path."
     type_: Optional["LedgerAccountTypeFilter"] = Field(alias="type", default=None)
     "Use this to filter Ledger Accounts by their type"
 
 
 class LedgerEntriesFilterSet(BaseModel):
+    created: Optional["DateTimeFilter"] = None
+    "Use this filter to filter Ledger Entries by their `created` timestamp. This is the wall-clock time when the Ledger Entry was created."
     date: Optional["DateFilter"] = None
     "Use this filter to filter Ledger Entries by their `posted` date."
     group: Optional["GroupFilter"] = None
@@ -1299,6 +1314,7 @@ GroupBalanceAccountFilter.model_rebuild()
 GroupFilter.model_rebuild()
 GroupInput.model_rebuild()
 GroupReconciliationParametersInput.model_rebuild()
+LedgerAccountBalanceMatchInput.model_rebuild()
 LedgerAccountConditionInput.model_rebuild()
 LedgerAccountConsistencyConfigInput.model_rebuild()
 LedgerAccountDataMigrationsFilterSet.model_rebuild()
